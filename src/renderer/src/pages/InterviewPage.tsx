@@ -66,8 +66,8 @@ export default function InterviewPage(): JSX.Element | null {
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setIsThinking(false))
-    // Only re-run when the setup itself changes or voice settings first load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally depends only on [setup, voiceSettings] - speakQuestion
+    // and resumeAnalysis are stable for the lifetime of this page.
   }, [setup, voiceSettings])
 
   async function goToResults(interviewId: string): Promise<void> {
@@ -120,6 +120,11 @@ export default function InterviewPage(): JSX.Element | null {
 
   function handleTimeUp(): void {
     if (hasEndedRef.current || !interviewState || interviewState.interviewFinished) {
+      return
+    }
+    if (isThinking) {
+      // An answer is still being submitted - let it finish. The timer
+      // fires every second, so this will be retried shortly.
       return
     }
     hasEndedRef.current = true
