@@ -99,6 +99,10 @@ export function registerIpcHandlers(): void {
     return settingsService.getAiStatus()
   })
 
+  handle(IPC_CHANNELS.settingsResetAllData, async () => {
+    settingsService.resetAllData()
+  })
+
   handle(IPC_CHANNELS.dialogPickResumeFile, async () => {
     const result = await dialog.showOpenDialog({
       title: 'Select your resume',

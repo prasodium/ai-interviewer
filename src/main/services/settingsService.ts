@@ -1,5 +1,6 @@
 import { safeStorage } from 'electron'
 import { getSetting, setSetting, deleteSetting } from '../backend/database/settingsRepository'
+import { clearAllInterviews } from '../backend/database/interviewRepository'
 import { logger } from './logger'
 import type { AiStatus, AppSettings } from '@shared/types'
 
@@ -72,6 +73,13 @@ export function getApiKey(): string | null {
 
 export function clearApiKey(): void {
   deleteSetting(API_KEY_SETTING)
+}
+
+/** Wipes everything the app has stored: interview history, the API key, and preferences. */
+export function resetAllData(): void {
+  clearAllInterviews()
+  deleteSetting(API_KEY_SETTING)
+  deleteSetting(SETTINGS_KEY)
 }
 
 function hasStoredApiKey(): boolean {

@@ -72,6 +72,21 @@ export default function SettingsPage(): JSX.Element {
     flashSaved()
   }
 
+  async function handleResetAllData(): Promise<void> {
+    if (
+      !window.confirm(
+        'Reset the app completely? This deletes all interview history, your API key, and your preferences.'
+      )
+    ) {
+      return
+    }
+    await api.settings.resetAllData()
+    const [nextSettings, nextStatus] = await Promise.all([api.settings.get(), api.settings.getAiStatus()])
+    setSettings(nextSettings)
+    setAiStatus(nextStatus)
+    flashSaved()
+  }
+
   if (!settings) {
     return <p className="text-muted">Loading settings...</p>
   }
@@ -214,9 +229,14 @@ export default function SettingsPage(): JSX.Element {
         <p className="text-muted" style={{ fontSize: 13 }}>
           Resumes and interview transcripts are stored only on this device.
         </p>
-        <Button variant="danger" onClick={handleClearHistory}>
-          Clear Interview History
-        </Button>
+        <div className="row">
+          <Button variant="danger" onClick={handleClearHistory}>
+            Clear Interview History
+          </Button>
+          <Button variant="danger" onClick={handleResetAllData}>
+            Reset Application Data
+          </Button>
+        </div>
       </div>
     </div>
   )

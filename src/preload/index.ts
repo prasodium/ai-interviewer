@@ -29,7 +29,8 @@ const api: ElectronApi = {
     update: (partial) => ipcRenderer.invoke(IPC_CHANNELS.settingsUpdate, partial),
     setApiKey: (request) => ipcRenderer.invoke(IPC_CHANNELS.settingsSetApiKey, request),
     clearApiKey: () => ipcRenderer.invoke(IPC_CHANNELS.settingsClearApiKey),
-    getAiStatus: () => ipcRenderer.invoke(IPC_CHANNELS.settingsGetAiStatus)
+    getAiStatus: () => ipcRenderer.invoke(IPC_CHANNELS.settingsGetAiStatus),
+    resetAllData: () => ipcRenderer.invoke(IPC_CHANNELS.settingsResetAllData)
   },
   dialog: {
     pickResumeFile: () => ipcRenderer.invoke(IPC_CHANNELS.dialogPickResumeFile)

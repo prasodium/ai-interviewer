@@ -58,6 +58,7 @@ export interface ElectronApi {
     setApiKey(request: ApiKeyUpdateRequest): Promise<void>
     clearApiKey(): Promise<void>
     getAiStatus(): Promise<AiStatus>
+    resetAllData(): Promise<void>
   }
   dialog: {
     pickResumeFile(): Promise<string | null>
@@ -79,5 +80,6 @@ export const IPC_CHANNELS = {
   settingsSetApiKey: 'settings:set-api-key',
   settingsClearApiKey: 'settings:clear-api-key',
   settingsGetAiStatus: 'settings:get-ai-status',
+  settingsResetAllData: 'settings:reset-all-data',
   dialogPickResumeFile: 'dialog:pick-resume-file'
 } as const
