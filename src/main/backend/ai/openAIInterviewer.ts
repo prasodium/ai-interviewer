@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { logger } from '../../services/logger'
 import { AIRequestError, AIResponseError } from './aiErrors'
+import { parseJsonRecovering } from './jsonRecovery'
 import {
   INTERVIEWER_SYSTEM_PROMPT,
   buildEvaluateAnswerPrompt,
@@ -135,26 +136,11 @@ export class OpenAIInterviewer implements InterviewAI {
       throw new AIResponseError('The AI returned an empty response.')
     }
 
-    return this.parseJson(content)
-  }
-
-  private parseJson(content: string): Record<string, unknown> {
     try {
-      return JSON.parse(content)
-    } catch {
-      // Recovery attempt: the model occasionally wraps JSON in prose or
-      // markdown fences despite instructions. Try to salvage the object.
-      const start = content.indexOf('{')
-      const end = content.lastIndexOf('}')
-      if (start !== -1 && end !== -1 && end > start) {
-        try {
-          return JSON.parse(content.slice(start, end + 1))
-        } catch {
-          // fall through to the error below
-        }
-      }
+      return parseJsonRecovering(content)
+    } catch (error) {
       logger.error('Could not parse AI response as JSON', content)
-      throw new AIResponseError('The AI returned a response we could not understand.')
+      throw error
     }
   }
 }
