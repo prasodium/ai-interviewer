@@ -118,6 +118,19 @@ Tests run through Electron's own Node binary (`ELECTRON_RUN_AS_NODE=1`)
 because `better-sqlite3` is compiled specifically for Electron's ABI - a
 plain Node test runner would hit a `NODE_MODULE_VERSION` mismatch.
 
+## Prebuilt downloads
+
+Prebuilt installers (macOS `.dmg` and Windows `.exe`) are published on the
+[Releases page](../../releases). Neither is code-signed yet, so macOS will
+warn about an unidentified developer (right-click the app → **Open** once)
+and Windows SmartScreen will warn about an unrecognized publisher (**More
+info → Run anyway**).
+
+After installing, open **Settings** and paste in your own OpenAI API key -
+it's saved encrypted on your device and stays active every time you open
+the app until you change or remove it. No key is required to try the app;
+it runs in a free mock-AI mode by default.
+
 ## Building for macOS / Windows
 
 ```bash
