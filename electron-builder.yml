@@ -1,0 +1,41 @@
+appId: com.aiinterviewer.app
+productName: AI Interviewer
+copyright: Copyright © 2026
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - out/**/*
+  - package.json
+
+# No custom icon is included yet - electron-builder falls back to a
+# default icon. Drop icon.icns / icon.ico into resources/ and add
+# `icon: resources/icon` under each platform below to brand the app.
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.productivity
+
+dmg:
+  title: AI Interviewer
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  target:
+    - AppImage
+  category: Office
