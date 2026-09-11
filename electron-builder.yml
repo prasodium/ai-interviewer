@@ -30,7 +30,7 @@ mac:
   category: public.app-category.productivity
   # Required for macOS to show the microphone permission prompt at all -
   # without this key, getUserMedia() fails silently with no dialog.
-  extendInfoPlist:
+  extendInfo:
     NSMicrophoneUsageDescription: AI Interviewer needs microphone access to hear your spoken interview answers.
 
 dmg:
