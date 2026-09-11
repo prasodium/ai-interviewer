@@ -4,6 +4,7 @@ import { speechSynthesisService } from '../services/speechSynthesisService'
 import { api } from '../services/electronApi'
 import type {
   AiStatus,
+  AiVoiceName,
   AppSettings,
   InterviewDifficulty,
   InterviewLengthMinutes,
@@ -13,6 +14,7 @@ import type {
 const STYLES: InterviewStyle[] = ['Friendly', 'Professional', 'Strict', 'FAANG-style']
 const DIFFICULTIES: InterviewDifficulty[] = ['Easy', 'Medium', 'Hard']
 const LENGTHS: InterviewLengthMinutes[] = [10, 20, 30, 45]
+const AI_VOICES: AiVoiceName[] = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
 
 export default function SettingsPage(): JSX.Element {
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -130,48 +132,74 @@ export default function SettingsPage(): JSX.Element {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Voice</h3>
+        <p className="text-muted" style={{ fontSize: 13, marginTop: -8 }}>
+          When connected to OpenAI, the interviewer speaks with a natural AI
+          voice. Pick which one below.
+        </p>
         <div className="field">
-          <label htmlFor="voice-select">Voice</label>
+          <label htmlFor="ai-voice-select">AI voice</label>
           <select
-            id="voice-select"
-            value={settings.voiceName ?? ''}
-            onChange={(event) => updateSetting({ voiceName: event.target.value || null })}
+            id="ai-voice-select"
+            value={settings.aiVoice}
+            onChange={(event) => updateSetting({ aiVoice: event.target.value as AiVoiceName })}
           >
-            <option value="">System default</option>
-            {voices.map((voice) => (
-              <option key={voice.name} value={voice.name}>
-                {voice.name}
+            {AI_VOICES.map((voice) => (
+              <option key={voice} value={voice}>
+                {voice.charAt(0).toUpperCase() + voice.slice(1)}
               </option>
             ))}
           </select>
         </div>
 
-        <div className="field-grid">
-          <div className="field">
-            <label htmlFor="voice-speed">Voice speed ({settings.voiceSpeed.toFixed(1)}x)</label>
-            <input
-              id="voice-speed"
-              type="range"
-              min={0.5}
-              max={1.5}
-              step={0.1}
-              value={settings.voiceSpeed}
-              onChange={(event) => updateSetting({ voiceSpeed: Number(event.target.value) })}
-            />
+        <details>
+          <summary className="text-muted" style={{ fontSize: 13, cursor: 'pointer' }}>
+            Fallback voice settings (used only in mock mode, or if the AI voice fails)
+          </summary>
+          <div style={{ marginTop: 16 }}>
+            <div className="field">
+              <label htmlFor="voice-select">Browser voice</label>
+              <select
+                id="voice-select"
+                value={settings.voiceName ?? ''}
+                onChange={(event) => updateSetting({ voiceName: event.target.value || null })}
+              >
+                <option value="">System default</option>
+                {voices.map((voice) => (
+                  <option key={voice.name} value={voice.name}>
+                    {voice.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field-grid">
+              <div className="field">
+                <label htmlFor="voice-speed">Voice speed ({settings.voiceSpeed.toFixed(1)}x)</label>
+                <input
+                  id="voice-speed"
+                  type="range"
+                  min={0.5}
+                  max={1.5}
+                  step={0.1}
+                  value={settings.voiceSpeed}
+                  onChange={(event) => updateSetting({ voiceSpeed: Number(event.target.value) })}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="voice-volume">Voice volume ({Math.round(settings.voiceVolume * 100)}%)</label>
+                <input
+                  id="voice-volume"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={settings.voiceVolume}
+                  onChange={(event) => updateSetting({ voiceVolume: Number(event.target.value) })}
+                />
+              </div>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="voice-volume">Voice volume ({Math.round(settings.voiceVolume * 100)}%)</label>
-            <input
-              id="voice-volume"
-              type="range"
-              min={0}
-              max={1}
-              step={0.1}
-              value={settings.voiceVolume}
-              onChange={(event) => updateSetting({ voiceVolume: Number(event.target.value) })}
-            />
-          </div>
-        </div>
+        </details>
       </div>
 
       <div className="card">

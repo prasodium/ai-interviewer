@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: Omit<AppSettings, 'hasApiKey'> = {
   voiceName: null,
   voiceSpeed: 1,
   voiceVolume: 1,
+  aiVoice: 'alloy',
   preferredInterviewStyle: 'Professional',
   defaultDifficulty: 'Medium',
   defaultLengthMinutes: 20

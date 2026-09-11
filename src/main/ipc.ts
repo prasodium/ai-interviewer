@@ -4,13 +4,18 @@ import type {
   AnswerInterviewRequest,
   AnswerInterviewResponse,
   ApiKeyUpdateRequest,
-  StartInterviewRequest
+  SynthesizeSpeechRequest,
+  SynthesizeSpeechResponse,
+  StartInterviewRequest,
+  TranscribeRequest,
+  TranscribeResponse
 } from '@shared/ipc'
 import type { AppSettings } from '@shared/types'
 import { analyzeResume } from './backend/resume/resumeService'
 import * as interviewEngine from './backend/interview/interviewEngine'
 import * as interviewRepository from './backend/database/interviewRepository'
 import * as settingsService from './services/settingsService'
+import { transcribeAudio, synthesizeSpeech } from './backend/ai/speechService'
 import { logger } from './services/logger'
 
 /**
@@ -101,6 +106,17 @@ export function registerIpcHandlers(): void {
 
   handle(IPC_CHANNELS.settingsResetAllData, async () => {
     settingsService.resetAllData()
+  })
+
+  handle(IPC_CHANNELS.speechTranscribe, async (request: TranscribeRequest): Promise<TranscribeResponse> => {
+    const audioBuffer = Buffer.from(request.audioBase64, 'base64')
+    const text = await transcribeAudio(audioBuffer, request.mimeType)
+    return { text }
+  })
+
+  handle(IPC_CHANNELS.speechSynthesize, async (request: SynthesizeSpeechRequest): Promise<SynthesizeSpeechResponse> => {
+    const audioBuffer = await synthesizeSpeech(request.text, request.voice)
+    return { audioBase64: audioBuffer ? audioBuffer.toString('base64') : null }
   })
 
   handle(IPC_CHANNELS.dialogPickResumeFile, async () => {

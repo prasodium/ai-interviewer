@@ -10,11 +10,14 @@ a time, adapts to your answers, and gives you a scored report at the end.
    and length, and upload a resume (PDF).
 2. The app reads your resume locally and extracts skills, experience, projects,
    education, and certifications.
-3. You start a voice interview. The AI interviewer asks one question at a time,
-   using your resume and the job description (if provided) to guide topics.
-4. You answer by speaking (or typing, as a fallback). The AI evaluates each
-   answer, asks follow-up questions on vague or interesting answers, and
-   adapts difficulty as you go.
+3. You start a voice interview. The AI interviewer speaks one question at a
+   time in a natural voice, using your resume and the job description (if
+   provided) to guide topics.
+4. You just talk - the mic listens automatically after each question and
+   stops when you go quiet, no click-to-talk needed (typing is available as
+   a fallback). The AI evaluates each answer, asks follow-up questions on
+   vague or interesting answers, and adapts difficulty as you go. The full
+   conversation is shown as text alongside the interview.
 5. When the interview ends, you get a full report: scores, strengths,
    weaknesses, a question-by-question breakdown, and suggested next steps.
 6. Past interviews are saved locally so you can track progress over time.
@@ -22,10 +25,13 @@ a time, adapts to your answers, and gives you a scored report at the end.
 ## Features
 
 - Resume-aware, adaptive interview questions (not a generic chatbot)
-- Voice input (Web Speech API) and voice output (SpeechSynthesis) - no paid
-  speech API required
+- Hands-free voice interviews: the mic listens automatically after each
+  question and stops when you go quiet, with a natural AI voice (OpenAI TTS)
+  asking the questions - no click-to-talk button needed
+- A live text transcript of the conversation alongside the voice interview
 - Automatic text-input fallback when voice isn't available
-- A **mock AI mode** that runs the entire app for free, with no API key
+- A **mock AI mode** that runs the entire app for free, with no API key (note:
+  voice specifically needs a real API key - see "Voice" below)
 - Local SQLite storage for interview history - resumes and transcripts never
   leave your machine unless you've configured a real OpenAI API key
 - API keys are encrypted at rest via the OS keychain (Electron `safeStorage`)
@@ -40,6 +46,24 @@ a time, adapts to your answers, and gives you a scored report at the end.
 - **Database:** SQLite (`better-sqlite3`)
 - **AI:** OpenAI API (swappable behind a small `InterviewAI` interface)
 - **Resume parsing:** `pdf-parse`, entirely on-device
+- **Voice:** OpenAI Whisper (speech-to-text) and TTS (text-to-speech) - see
+  "Voice" below for why
+
+## Voice
+
+Electron's bundled Chromium does not actually implement the browser's
+`SpeechRecognition` API - it depends on a private Google backend that only
+official Chrome ships credentials for, so it fails silently in every
+Electron app. Voice input therefore records raw microphone audio
+(`getUserMedia` + `MediaRecorder`, which works fine in Electron) and sends
+it to OpenAI's Whisper model for transcription. Voice output uses OpenAI's
+TTS voices, which sound noticeably more natural than the OS's built-in
+`SpeechSynthesis` voices.
+
+Both require a real OpenAI API key (configured in Settings) - mock mode
+falls back to typed answers and the free (more robotic) browser voice, to
+keep it genuinely free. Recording stops automatically after ~2 seconds of
+silence, so no button needs to be clicked to end an answer.
 
 ## Project structure
 
@@ -145,9 +169,10 @@ Custom app icons aren't included yet - drop `icon.icns` / `icon.ico` into
 
 - **"We couldn't connect to the AI service"** - check your internet
   connection and that `OPENAI_API_KEY` / the Settings API key is valid.
-- **"Voice input is not available in this environment"** - your platform's
-  Chromium build doesn't support the Web Speech API, or microphone
-  permission was denied. Use the "Type answer instead" fallback.
+- **Voice input falls back to typing** - this happens automatically in mock
+  mode, in an environment without microphone recording support, or if
+  microphone permission was denied. On macOS, check System Settings →
+  Privacy & Security → Microphone if the app isn't listed or is unchecked.
 - **better-sqlite3 fails to load after `npm install`** - run
   `npx electron-builder install-app-deps` to rebuild it for Electron's ABI.
 - **Resume upload fails** - only text-based PDFs are supported; scanned

@@ -122,7 +122,7 @@ a {
 .app-main {
   flex: 1;
   padding: 32px;
-  max-width: 880px;
+  max-width: 1100px;
   width: 100%;
   margin: 0 auto;
 }
@@ -485,13 +485,52 @@ a {
   cursor: not-allowed;
 }
 
+.mic-button--muted-hint {
+  background: var(--color-text-muted);
+}
+
 .fallback-answer {
   width: 100%;
   max-width: 480px;
 }
 
+/* Two-column interview layout: controls on the left, live transcript on the right. */
+
+.interview-layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.interview-main-column {
+  flex: 1;
+  min-width: 0;
+}
+
+.interview-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 32px;
+}
+
+.interview-sidebar h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .interview-layout {
+    flex-direction: column;
+  }
+  .interview-sidebar {
+    width: 100%;
+    position: static;
+  }
+}
+
 .transcript-panel {
-  max-height: 240px;
+  max-height: 65vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -503,6 +542,7 @@ a {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   max-width: 90%;
+  line-height: 1.4;
 }
 
 .transcript-message--interviewer {
@@ -514,4 +554,9 @@ a {
   background: rgba(91, 141, 239, 0.12);
   align-self: flex-end;
   text-align: right;
+}
+
+.transcript-empty {
+  color: var(--color-text-muted);
+  font-size: 13px;
 }

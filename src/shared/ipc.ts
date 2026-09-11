@@ -8,6 +8,7 @@
  */
 import type {
   AiStatus,
+  AiVoiceName,
   AppSettings,
   InterviewSetupOptions,
   InterviewState,
@@ -34,6 +35,27 @@ export interface AnswerInterviewResponse {
 
 export interface ApiKeyUpdateRequest {
   apiKey: string
+}
+
+export interface TranscribeRequest {
+  /** Base64-encoded recorded audio (no data: URL prefix). */
+  audioBase64: string
+  /** The MediaRecorder mime type used to record it, e.g. "audio/webm". */
+  mimeType: string
+}
+
+export interface TranscribeResponse {
+  text: string
+}
+
+export interface SynthesizeSpeechRequest {
+  text: string
+  voice: AiVoiceName
+}
+
+export interface SynthesizeSpeechResponse {
+  /** Base64-encoded MP3 audio (no data: URL prefix), or null if speech was not available (e.g. mock mode). */
+  audioBase64: string | null
 }
 
 export interface ElectronApi {
@@ -63,6 +85,10 @@ export interface ElectronApi {
   dialog: {
     pickResumeFile(): Promise<string | null>
   }
+  speech: {
+    transcribe(request: TranscribeRequest): Promise<TranscribeResponse>
+    synthesize(request: SynthesizeSpeechRequest): Promise<SynthesizeSpeechResponse>
+  }
 }
 
 export const IPC_CHANNELS = {
@@ -81,5 +107,7 @@ export const IPC_CHANNELS = {
   settingsClearApiKey: 'settings:clear-api-key',
   settingsGetAiStatus: 'settings:get-ai-status',
   settingsResetAllData: 'settings:reset-all-data',
-  dialogPickResumeFile: 'dialog:pick-resume-file'
+  dialogPickResumeFile: 'dialog:pick-resume-file',
+  speechTranscribe: 'speech:transcribe',
+  speechSynthesize: 'speech:synthesize'
 } as const

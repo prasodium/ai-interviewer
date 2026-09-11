@@ -34,6 +34,10 @@ const api: ElectronApi = {
   },
   dialog: {
     pickResumeFile: () => ipcRenderer.invoke(IPC_CHANNELS.dialogPickResumeFile)
+  },
+  speech: {
+    transcribe: (request) => ipcRenderer.invoke(IPC_CHANNELS.speechTranscribe, request),
+    synthesize: (request) => ipcRenderer.invoke(IPC_CHANNELS.speechSynthesize, request)
   }
 }
 
