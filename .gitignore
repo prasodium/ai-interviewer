@@ -1,0 +1,31 @@
+node_modules/
+out/
+*.tsbuildinfo
+dist/
+dist-electron/
+release/
+build/
+
+# Environment secrets
+.env
+.env.local
+
+# App data / local database (kept out of the repo)
+*.sqlite
+*.sqlite-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Test / coverage
+coverage/
