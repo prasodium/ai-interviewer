@@ -21,11 +21,12 @@ files:
 # `icon: resources/icon` under each platform below to brand the app.
 
 mac:
+  # No arch list here on purpose - the release workflow builds arm64 and
+  # x64 as separate CI jobs (via --arm64 / --x64 on the CLI) to avoid a
+  # known hdiutil volume-mount collision when both are built in one run.
+  # An explicit arch list here would override those CLI flags.
   target:
-    - target: dmg
-      arch:
-        - arm64
-        - x64
+    - dmg
   category: public.app-category.productivity
 
 dmg:
