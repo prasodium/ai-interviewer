@@ -2,6 +2,12 @@ appId: com.aiinterviewer.app
 productName: AI Interviewer
 copyright: Copyright © 2026
 
+# The release workflow publishes built installers to a GitHub Release
+# itself (see .github/workflows/release.yml) - without this, electron-
+# builder auto-detects the git tag in CI and tries to publish on its
+# own, which fails without a GH_TOKEN passed into this exact step.
+publish: null
+
 directories:
   output: release
   buildResources: resources

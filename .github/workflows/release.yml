@@ -12,6 +12,9 @@ permissions:
 jobs:
   build-mac:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,14 +30,17 @@ jobs:
 
       - run: npm run build
 
-      - name: Build macOS DMG
-        run: npx electron-builder --mac
+      - name: Build macOS DMG (${{ matrix.arch }})
+        # Built as separate jobs per arch (not one --mac call covering
+        # both) because building both DMGs in the same run hits a known
+        # hdiutil/volume-mount collision on GitHub's macOS runners.
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - uses: actions/upload-artifact@v4
         with:
-          name: mac-build
+          name: mac-build-${{ matrix.arch }}
           path: |
             release/*.dmg
             release/*.blockmap
@@ -58,7 +64,7 @@ jobs:
       - run: npm run build
 
       - name: Build Windows installer
-        run: npx electron-builder --win
+        run: npx electron-builder --win --publish never
 
       - uses: actions/upload-artifact@v4
         with:
@@ -76,8 +82,9 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: mac-build
+          pattern: mac-build-*
           path: dist/mac
+          merge-multiple: true
 
       - uses: actions/download-artifact@v4
         with:
