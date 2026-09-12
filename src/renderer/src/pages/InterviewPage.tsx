@@ -50,6 +50,10 @@ const PHASE_AVATAR: Record<InterviewPhase, AvatarState> = {
   finishing: 'thinking'
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export default function InterviewPage(): JSX.Element | null {
   const navigate = useNavigate()
   const { setup, resumeAnalysis, setActiveInterviewId } = useInterviewFlow()
@@ -135,6 +139,12 @@ export default function InterviewPage(): JSX.Element | null {
 
       let answerText: string
       if (!forceTextModeRef.current) {
+        // A brief settle buffer after speech ends, before arming the mic -
+        // otherwise the tail end of the AI's own voice (still resonating
+        // briefly through the speakers) can get captured as the answer.
+        await sleep(500)
+        if (cancelledRef.current) return
+
         setPhase('listening')
         try {
           answerText = await voiceAnswer.recordAndTranscribe()

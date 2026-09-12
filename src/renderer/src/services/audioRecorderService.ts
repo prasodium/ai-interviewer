@@ -8,7 +8,7 @@
  * official Chrome ships credentials for).
  */
 
-const SILENCE_DURATION_MS = 2000
+const SILENCE_DURATION_MS = 3000
 const MAX_WAIT_FOR_SPEECH_MS = 8000
 const MAX_RECORDING_MS = 90000
 const VOLUME_POLL_INTERVAL_MS = 100
@@ -59,7 +59,16 @@ export class AudioRecorderService {
 
     let stream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Explicitly requesting echo cancellation is what stops the mic from
+      // picking up the AI's own voice through the speakers and feeding it
+      // back in as if it were the candidate's answer.
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
     } catch {
       throw new AudioRecorderError(
         'permission-denied',
