@@ -8,6 +8,7 @@ import TranscriptPanel from '../components/TranscriptPanel'
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis'
 import { useVoiceAnswer } from '../hooks/useVoiceAnswer'
 import { AudioRecorderError } from '../services/audioRecorderService'
+import { isLikelyEchoOfQuestion } from '../services/echoDetection'
 import { api } from '../services/electronApi'
 import { useInterviewFlow } from '../state/InterviewFlowContext'
 import type { AiStatus, AppSettings, InterviewState } from '@shared/types'
@@ -53,6 +54,9 @@ const PHASE_AVATAR: Record<InterviewPhase, AvatarState> = {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+/** How many times to re-listen before giving up on voice for the rest of the interview if every capture looks like an echo of the question. */
+const MAX_ECHO_RETRIES = 2
 
 export default function InterviewPage(): JSX.Element | null {
   const navigate = useNavigate()
@@ -137,32 +141,60 @@ export default function InterviewPage(): JSX.Element | null {
         return
       }
 
-      let answerText: string
-      if (!forceTextModeRef.current) {
-        // A brief settle buffer after speech ends, before arming the mic -
-        // otherwise the tail end of the AI's own voice (still resonating
-        // briefly through the speakers) can get captured as the answer.
-        await sleep(500)
-        if (cancelledRef.current) return
+      let answerText = ''
+      let echoRetriesLeft = MAX_ECHO_RETRIES
+      let haveValidAnswer = false
 
-        setPhase('listening')
-        try {
-          answerText = await voiceAnswer.recordAndTranscribe()
-          setPhase('transcribing')
-        } catch (err) {
+      while (!haveValidAnswer) {
+        if (!forceTextModeRef.current) {
+          // A brief settle buffer after speech ends, before arming the mic -
+          // otherwise the tail end of the AI's own voice (still resonating
+          // briefly through the speakers) can get captured as the answer.
+          await sleep(500)
           if (cancelledRef.current) return
-          const isUserCancelled = err instanceof AudioRecorderError && err.reason === 'cancelled'
-          forceTextModeRef.current = true
-          setForceTextMode(true)
-          if (!isUserCancelled) {
-            setError(err instanceof Error ? err.message : 'Voice input failed.')
+          synthesis.stop()
+
+          setPhase('listening')
+          try {
+            answerText = await voiceAnswer.recordAndTranscribe()
+            setPhase('transcribing')
+          } catch (err) {
+            if (cancelledRef.current) return
+            const isUserCancelled = err instanceof AudioRecorderError && err.reason === 'cancelled'
+            forceTextModeRef.current = true
+            setForceTextMode(true)
+            if (!isUserCancelled) {
+              setError(err instanceof Error ? err.message : 'Voice input failed.')
+            }
+            setPhase('awaiting-text')
+            answerText = await waitForManualTextSubmit()
+            haveValidAnswer = true
+            break
           }
+
+          const soundsLikeEcho = isLikelyEchoOfQuestion(reply, answerText)
+          if (!soundsLikeEcho) {
+            setError(null)
+            haveValidAnswer = true
+          } else if (echoRetriesLeft > 0) {
+            echoRetriesLeft -= 1
+            setError("Didn't catch an answer there - listening again.")
+          } else {
+            // Repeated echoes even after retrying - voice isn't working
+            // reliably in this environment, so switch to typing instead
+            // of looping on the same false capture forever.
+            forceTextModeRef.current = true
+            setForceTextMode(true)
+            setError("Having trouble hearing your answers clearly - let's switch to typing.")
+            setPhase('awaiting-text')
+            answerText = await waitForManualTextSubmit()
+            haveValidAnswer = true
+          }
+        } else {
           setPhase('awaiting-text')
           answerText = await waitForManualTextSubmit()
+          haveValidAnswer = true
         }
-      } else {
-        setPhase('awaiting-text')
-        answerText = await waitForManualTextSubmit()
       }
       if (cancelledRef.current) return
 
