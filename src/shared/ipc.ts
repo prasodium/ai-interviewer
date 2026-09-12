@@ -51,11 +51,13 @@ export interface TranscribeResponse {
 export interface SynthesizeSpeechRequest {
   text: string
   voice: AiVoiceName
+  /** OpenAI TTS speed, 0.25-4.0. */
+  speed: number
 }
 
 export interface SynthesizeSpeechResponse {
-  /** Base64-encoded MP3 audio (no data: URL prefix), or null if speech was not available (e.g. mock mode). */
-  audioBase64: string | null
+  /** Base64-encoded MP3 audio (no data: URL prefix). */
+  audioBase64: string
 }
 
 export interface ElectronApi {

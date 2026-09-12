@@ -29,12 +29,14 @@ a time, adapts to your answers, and gives you a scored report at the end.
   question and stops when you go quiet, with a natural AI voice (OpenAI TTS)
   asking the questions - no click-to-talk button needed
 - A live text transcript of the conversation alongside the voice interview
-- Automatic text-input fallback when voice isn't available
-- A **mock AI mode** that runs the entire app for free, with no API key (note:
-  voice specifically needs a real API key - see "Voice" below)
+- Automatic text-input fallback when voice recording isn't available
 - Local SQLite storage for interview history - resumes and transcripts never
-  leave your machine unless you've configured a real OpenAI API key
+  leave your machine except to OpenAI, for generating questions/feedback/voice
 - API keys are encrypted at rest via the OS keychain (Electron `safeStorage`)
+
+The entire pipeline - interview questions, evaluation, speech-to-text, and
+text-to-speech - runs on the OpenAI API. An API key is required; there is no
+offline or mock mode.
 
 ## Technology
 
@@ -44,7 +46,9 @@ a time, adapts to your answers, and gives you a scored report at the end.
   renderer only through a typed IPC bridge (no direct filesystem/network
   access from the UI, and the OpenAI key never touches renderer code)
 - **Database:** SQLite (`better-sqlite3`)
-- **AI:** OpenAI API (swappable behind a small `InterviewAI` interface)
+- **AI:** OpenAI API (`gpt-4o-mini` for interview logic, Whisper for
+  speech-to-text, TTS for voice output) - behind a small `InterviewAI`
+  interface so a different provider could be swapped in later
 - **Resume parsing:** `pdf-parse`, entirely on-device
 - **Voice:** OpenAI Whisper (speech-to-text) and TTS (text-to-speech) - see
   "Voice" below for why
@@ -60,10 +64,14 @@ it to OpenAI's Whisper model for transcription. Voice output uses OpenAI's
 TTS voices, which sound noticeably more natural than the OS's built-in
 `SpeechSynthesis` voices.
 
-Both require a real OpenAI API key (configured in Settings) - mock mode
-falls back to typed answers and the free (more robotic) browser voice, to
-keep it genuinely free. Recording stops automatically after ~2 seconds of
-silence, so no button needs to be clicked to end an answer.
+Both require a real OpenAI API key (configured in Settings) - there is no
+offline fallback. Recording stops automatically a few seconds after you go
+quiet, so no button needs to be clicked to end an answer. The app also
+checks whether a recording ever crossed a speech-volume threshold before
+sending it to Whisper at all, and whether a transcribed answer just echoes
+the question back - both are safety nets against acoustic feedback and
+Whisper's tendency to hallucinate stock phrases ("Thank you for watching!")
+when fed silence.
 
 ## Project structure
 
@@ -71,7 +79,7 @@ silence, so no button needs to be clicked to end an answer.
 src/
   main/            Electron main process
     backend/
-      ai/          InterviewAI interface + mock and OpenAI implementations
+      ai/          InterviewAI interface + the OpenAI implementation, speech (Whisper/TTS)
       resume/      PDF text extraction, resume/job-description analysis
       interview/   Interview state machine, scoring
       database/    SQLite access
@@ -97,11 +105,13 @@ npm install
 
 ```bash
 cp .env.example .env
+# edit .env and add your OPENAI_API_KEY
 npm run dev
 ```
 
-This opens the app in mock AI mode by default (see below), so you can use the
-whole app without an API key or spending anything.
+An OpenAI API key is required to do anything AI-related - there is no mock
+mode. Without one, the app still opens and you can browse settings/history,
+but starting an interview will prompt you to add a key.
 
 ## Environment variables
 
@@ -109,19 +119,11 @@ Set these in `.env` during development (see `.env.example`):
 
 | Variable          | Description                                             |
 | ----------------- | -------------------------------------------------------- |
-| `OPENAI_API_KEY`  | Your OpenAI API key. Leave empty to stay in mock mode.   |
+| `OPENAI_API_KEY`  | Your OpenAI API key. Required.                          |
 | `OPENAI_MODEL`    | Model used for interview questions/evaluation. Default: `gpt-4o-mini`. |
-| `USE_MOCK_AI`     | `true` forces the mock interviewer even if a key is set. |
 
 In the packaged app, the API key is instead entered in **Settings** and stored
 encrypted on disk - `.env` is only used for local development.
-
-## Mock mode (no API key needed)
-
-If `USE_MOCK_AI=true` or no API key is configured (via `.env` or Settings),
-the app automatically uses a built-in mock interviewer: resume-aware,
-canned-but-reasonable questions and feedback, with zero API calls. This is
-the default in `.env.example` so you can build and test the full UI for free.
 
 ## Configuring OpenAI
 
@@ -129,7 +131,6 @@ the default in `.env.example` so you can build and test the full UI for free.
 2. Either put it in `.env` as `OPENAI_API_KEY` (development), or open the
    app's **Settings** page and paste it there (works in both dev and the
    packaged app, and is what end users should do).
-3. Leave `USE_MOCK_AI` unset or `false` to use the real AI.
 
 ## Testing
 
@@ -152,8 +153,7 @@ info → Run anyway**).
 
 After installing, open **Settings** and paste in your own OpenAI API key -
 it's saved encrypted on your device and stays active every time you open
-the app until you change or remove it. No key is required to try the app;
-it runs in a free mock-AI mode by default.
+the app until you change or remove it. A key is required to run interviews.
 
 ## Building for macOS / Windows
 
@@ -169,10 +169,12 @@ Custom app icons aren't included yet - drop `icon.icns` / `icon.ico` into
 
 - **"We couldn't connect to the AI service"** - check your internet
   connection and that `OPENAI_API_KEY` / the Settings API key is valid.
-- **Voice input falls back to typing** - this happens automatically in mock
-  mode, in an environment without microphone recording support, or if
-  microphone permission was denied. On macOS, check System Settings →
-  Privacy & Security → Microphone if the app isn't listed or is unchecked.
+- **Voice input falls back to typing** - this happens automatically when no
+  API key is configured, in an environment without microphone recording
+  support, or if microphone permission was denied. On macOS, check System
+  Settings → Privacy & Security → Microphone if the app isn't listed or is
+  unchecked (note: running via `npm run dev` and the packaged app are
+  different app identities to macOS and need permission granted separately).
 - **better-sqlite3 fails to load after `npm install`** - run
   `npx electron-builder install-app-deps` to rebuild it for Electron's ABI.
 - **Resume upload fails** - only text-based PDFs are supported; scanned
@@ -181,7 +183,8 @@ Custom app icons aren't included yet - drop `icon.icns` / `icon.ico` into
 ## Privacy
 
 Resumes and interview transcripts are stored only in a local SQLite database
-in your OS's application data directory. Nothing is sent anywhere except to
-OpenAI, and only when a real API key is configured (mock mode makes no
-network calls at all). Use **Settings → Clear Interview History** to delete
-everything.
+in your OS's application data directory. Your resume text, spoken answers,
+and interview transcripts are sent to OpenAI to generate questions,
+evaluate answers, and produce speech - that's inherent to how the app
+works, since it requires an API key to function at all. Use **Settings →
+Clear Interview History** to delete everything stored locally.

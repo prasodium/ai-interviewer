@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import InterviewAvatar, { type AvatarState } from '../components/InterviewAvatar'
 import InterviewProgress from '../components/InterviewProgress'
 import InterviewTimer from '../components/InterviewTimer'
@@ -83,7 +83,7 @@ export default function InterviewPage(): JSX.Element | null {
     Promise.all([api.settings.get(), api.settings.getAiStatus()]).then(([settings, status]) => {
       setVoiceSettings(settings)
       setAiStatus(status)
-      const voiceUnavailable = status.usingMockAi || !voiceAnswer.isSupported
+      const voiceUnavailable = !voiceAnswer.isSupported
       forceTextModeRef.current = voiceUnavailable
       setForceTextMode(voiceUnavailable)
     })
@@ -128,12 +128,18 @@ export default function InterviewPage(): JSX.Element | null {
 
     while (!cancelledRef.current) {
       setPhase('speaking')
-      await synthesis.speak(reply, {
-        aiVoice: voiceSettings!.aiVoice,
-        voiceName: voiceSettings!.voiceName,
-        rate: voiceSettings!.voiceSpeed,
-        volume: voiceSettings!.voiceVolume
-      })
+      try {
+        await synthesis.speak(reply, {
+          aiVoice: voiceSettings!.aiVoice,
+          speed: voiceSettings!.voiceSpeed,
+          volume: voiceSettings!.voiceVolume
+        })
+        setError(null)
+      } catch (err) {
+        // Voice output has no fallback - show what went wrong but keep
+        // going, since the question is already visible on screen.
+        setError(err instanceof Error ? err.message : 'Could not play the question aloud.')
+      }
       if (cancelledRef.current) return
 
       if (state.interviewFinished) {
@@ -241,7 +247,11 @@ export default function InterviewPage(): JSX.Element | null {
       navigate('/setup')
       return
     }
-    if (hasStartedRef.current || !voiceSettings) {
+    if (hasStartedRef.current || !voiceSettings || !aiStatus) {
+      return
+    }
+    if (!aiStatus.hasApiKey) {
+      // Rendered as a dedicated gate screen instead - see below.
       return
     }
     hasStartedRef.current = true
@@ -258,8 +268,8 @@ export default function InterviewPage(): JSX.Element | null {
         runInterviewLoop(state, interviewerReply)
       })
       .catch((err: Error) => setError(err.message))
-    // Intentionally depends only on [setup, voiceSettings] - hasStartedRef prevents re-entry.
-  }, [setup, voiceSettings])
+    // hasStartedRef prevents this from ever running the real start twice.
+  }, [setup, voiceSettings, aiStatus])
 
   function handleTimeUp(): void {
     if (cancelledRef.current || !interviewState || interviewState.interviewFinished) {
@@ -292,6 +302,17 @@ export default function InterviewPage(): JSX.Element | null {
     return null
   }
 
+  if (aiStatus && !aiStatus.hasApiKey) {
+    return (
+      <div className="empty-state">
+        <p>An OpenAI API key is required to run interviews.</p>
+        <Link to="/settings" className="button button--primary">
+          Go to Settings
+        </Link>
+      </div>
+    )
+  }
+
   const avatarState = PHASE_AVATAR[phase]
   const statusText = PHASE_STATUS[phase]
 
@@ -317,14 +338,7 @@ export default function InterviewPage(): JSX.Element | null {
 
         {error && <div className="banner banner--danger">{error}</div>}
 
-        {aiStatus?.usingMockAi && (
-          <div className="banner banner--warning">
-            Voice input and the natural AI voice both need a real OpenAI API key (mock mode stays free) - typing is
-            used for this interview. Add a key in Settings to enable hands-free voice.
-          </div>
-        )}
-
-        {!aiStatus?.usingMockAi && !voiceAnswer.isSupported && (
+        {!voiceAnswer.isSupported && (
           <div className="banner banner--warning">
             Voice recording is not available in this environment. Please type your answers instead.
           </div>

@@ -35,7 +35,7 @@ interface AiSpeechPlaybackHandlers {
 
 let currentAudio: HTMLAudioElement | null = null
 
-/** Stops whatever AI-voice audio is currently playing, if any (Mute button, ending the interview, etc). */
+/** Stops whatever AI-voice audio is currently playing, if any (ending the interview, etc). */
 export function stopAiVoice(): void {
   if (currentAudio) {
     currentAudio.pause()
@@ -43,36 +43,43 @@ export function stopAiVoice(): void {
   }
 }
 
-/**
- * Synthesizes speech with OpenAI's natural-sounding TTS and plays it.
- * Returns false (without throwing) when AI voice isn't available - e.g.
- * mock mode - so the caller can fall back to the free browser voice.
- */
+/** Synthesizes speech with OpenAI's TTS and plays it. Throws if the API call fails - there is no fallback voice. */
 export async function speakWithAiVoice(
   text: string,
   voice: AiVoiceName,
+  speed: number,
+  volume: number,
   handlers: AiSpeechPlaybackHandlers
-): Promise<boolean> {
-  const { audioBase64 } = await api.speech.synthesize({ text, voice })
-  if (!audioBase64) {
-    return false
-  }
+): Promise<void> {
+  const { audioBase64 } = await api.speech.synthesize({ text, voice, speed })
 
   stopAiVoice()
 
   const url = base64ToObjectUrl(audioBase64, 'audio/mpeg')
   const audio = new Audio(url)
+  audio.volume = Math.min(1, Math.max(0, volume))
   currentAudio = audio
-  audio.onplay = () => handlers.onStart?.()
-  const cleanup = (): void => {
-    if (currentAudio === audio) {
-      currentAudio = null
+
+  return new Promise<void>((resolve, reject) => {
+    audio.onplay = () => handlers.onStart?.()
+    const cleanup = (): void => {
+      if (currentAudio === audio) {
+        currentAudio = null
+      }
+      URL.revokeObjectURL(url)
+      handlers.onEnd?.()
     }
-    URL.revokeObjectURL(url)
-    handlers.onEnd?.()
-  }
-  audio.onended = cleanup
-  audio.onerror = cleanup
-  await audio.play()
-  return true
+    audio.onended = () => {
+      cleanup()
+      resolve()
+    }
+    audio.onerror = () => {
+      cleanup()
+      reject(new Error('Playback failed.'))
+    }
+    audio.play().catch((error) => {
+      cleanup()
+      reject(error)
+    })
+  })
 }

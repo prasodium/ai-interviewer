@@ -28,11 +28,10 @@ describe('settingsService API key persistence', () => {
 
   beforeEach(() => {
     delete process.env.OPENAI_API_KEY
-    delete process.env.USE_MOCK_AI
   })
 
-  it('reports no API key and mock AI before anything is saved', () => {
-    expect(settingsService.getAiStatus()).toEqual({ usingMockAi: true, hasApiKey: false })
+  it('reports no API key before anything is saved', () => {
+    expect(settingsService.getAiStatus()).toEqual({ hasApiKey: false })
   })
 
   it('stores an API key encrypted and reads it back correctly', () => {
@@ -49,7 +48,6 @@ describe('settingsService API key persistence', () => {
     // the next time the app is launched.
     expect(settingsService.getApiKey()).toBe('sk-persisted-key')
     expect(settingsService.getAiStatus().hasApiKey).toBe(true)
-    expect(settingsService.getAiStatus().usingMockAi).toBe(false)
   })
 
   it('keeps using the saved key until the user explicitly changes or removes it', () => {
@@ -61,14 +59,7 @@ describe('settingsService API key persistence', () => {
 
     settingsService.clearApiKey()
     expect(settingsService.getApiKey()).toBeNull()
-    expect(settingsService.getAiStatus()).toEqual({ usingMockAi: true, hasApiKey: false })
-  })
-
-  it('forces mock AI when USE_MOCK_AI=true even with a saved key', () => {
-    settingsService.storeApiKey('sk-real-key')
-    process.env.USE_MOCK_AI = 'true'
-    expect(settingsService.getAiStatus().usingMockAi).toBe(true)
-    expect(settingsService.getAiStatus().hasApiKey).toBe(true)
+    expect(settingsService.getAiStatus()).toEqual({ hasApiKey: false })
   })
 
   it('resetAllData removes the saved API key and preferences', () => {

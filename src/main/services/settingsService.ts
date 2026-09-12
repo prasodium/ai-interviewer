@@ -8,7 +8,6 @@ const SETTINGS_KEY = 'app_settings'
 const API_KEY_SETTING = 'openai_api_key_encrypted'
 
 const DEFAULT_SETTINGS: Omit<AppSettings, 'hasApiKey'> = {
-  voiceName: null,
   voiceSpeed: 1,
   voiceVolume: 1,
   aiVoice: 'alloy',
@@ -88,12 +87,7 @@ function hasStoredApiKey(): boolean {
 }
 
 export function getAiStatus(): AiStatus {
-  const forceMock = process.env.USE_MOCK_AI === 'true'
-  const hasApiKey = hasStoredApiKey()
-  return {
-    usingMockAi: forceMock || !hasApiKey,
-    hasApiKey
-  }
+  return { hasApiKey: hasStoredApiKey() }
 }
 
 /** Resolves the effective API key: explicit setting first, then env var. */

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import Button from '../components/Button'
-import { speechSynthesisService } from '../services/speechSynthesisService'
 import { api } from '../services/electronApi'
 import type {
   AiStatus,
@@ -20,19 +19,11 @@ export default function SettingsPage(): JSX.Element {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [savedMessage, setSavedMessage] = useState('')
 
   useEffect(() => {
     api.settings.get().then(setSettings)
     api.settings.getAiStatus().then(setAiStatus)
-
-    function loadVoices(): void {
-      setVoices(speechSynthesisService.getAvailableVoices())
-    }
-    loadVoices()
-    window.speechSynthesis?.addEventListener('voiceschanged', loadVoices)
-    return () => window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices)
   }, [])
 
   function flashSaved(): void {
@@ -99,10 +90,10 @@ export default function SettingsPage(): JSX.Element {
       <p className="page-subtitle">{savedMessage}</p>
 
       {aiStatus && (
-        <div className={`banner ${aiStatus.usingMockAi ? 'banner--warning' : 'banner--info'}`}>
-          {aiStatus.usingMockAi
-            ? 'Using the built-in mock interviewer. Add an OpenAI API key below to use real AI-generated questions.'
-            : 'Connected to OpenAI. Your resume and answers are sent to OpenAI to generate interview questions and feedback.'}
+        <div className={`banner ${aiStatus.hasApiKey ? 'banner--info' : 'banner--warning'}`}>
+          {aiStatus.hasApiKey
+            ? 'Connected to OpenAI. Your resume and answers are sent to OpenAI to generate interview questions, voice, and feedback.'
+            : 'An OpenAI API key is required to run interviews - add one below to get started.'}
         </div>
       )}
 
@@ -133,11 +124,10 @@ export default function SettingsPage(): JSX.Element {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Voice</h3>
         <p className="text-muted" style={{ fontSize: 13, marginTop: -8 }}>
-          When connected to OpenAI, the interviewer speaks with a natural AI
-          voice. Pick which one below.
+          The interviewer speaks with OpenAI's text-to-speech. Pick a voice and tune its speed and volume below.
         </p>
         <div className="field">
-          <label htmlFor="ai-voice-select">AI voice</label>
+          <label htmlFor="ai-voice-select">Voice</label>
           <select
             id="ai-voice-select"
             value={settings.aiVoice}
@@ -151,55 +141,32 @@ export default function SettingsPage(): JSX.Element {
           </select>
         </div>
 
-        <details>
-          <summary className="text-muted" style={{ fontSize: 13, cursor: 'pointer' }}>
-            Fallback voice settings (used only in mock mode, or if the AI voice fails)
-          </summary>
-          <div style={{ marginTop: 16 }}>
-            <div className="field">
-              <label htmlFor="voice-select">Browser voice</label>
-              <select
-                id="voice-select"
-                value={settings.voiceName ?? ''}
-                onChange={(event) => updateSetting({ voiceName: event.target.value || null })}
-              >
-                <option value="">System default</option>
-                {voices.map((voice) => (
-                  <option key={voice.name} value={voice.name}>
-                    {voice.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field-grid">
-              <div className="field">
-                <label htmlFor="voice-speed">Voice speed ({settings.voiceSpeed.toFixed(1)}x)</label>
-                <input
-                  id="voice-speed"
-                  type="range"
-                  min={0.5}
-                  max={1.5}
-                  step={0.1}
-                  value={settings.voiceSpeed}
-                  onChange={(event) => updateSetting({ voiceSpeed: Number(event.target.value) })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="voice-volume">Voice volume ({Math.round(settings.voiceVolume * 100)}%)</label>
-                <input
-                  id="voice-volume"
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={settings.voiceVolume}
-                  onChange={(event) => updateSetting({ voiceVolume: Number(event.target.value) })}
-                />
-              </div>
-            </div>
+        <div className="field-grid">
+          <div className="field">
+            <label htmlFor="voice-speed">Voice speed ({settings.voiceSpeed.toFixed(1)}x)</label>
+            <input
+              id="voice-speed"
+              type="range"
+              min={0.5}
+              max={1.5}
+              step={0.1}
+              value={settings.voiceSpeed}
+              onChange={(event) => updateSetting({ voiceSpeed: Number(event.target.value) })}
+            />
           </div>
-        </details>
+          <div className="field">
+            <label htmlFor="voice-volume">Voice volume ({Math.round(settings.voiceVolume * 100)}%)</label>
+            <input
+              id="voice-volume"
+              type="range"
+              min={0}
+              max={1}
+              step={0.1}
+              value={settings.voiceVolume}
+              onChange={(event) => updateSetting({ voiceVolume: Number(event.target.value) })}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="card">

@@ -1,59 +1,29 @@
 import { useState } from 'react'
-import { speechSynthesisService } from '../services/speechSynthesisService'
 import { speakWithAiVoice, stopAiVoice } from '../services/aiSpeechService'
 import type { AiVoiceName } from '@shared/types'
 
 interface SpeakOptions {
   aiVoice: AiVoiceName
-  voiceName: string | null
-  rate: number
+  speed: number
   volume: number
 }
 
 export function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false)
 
-  /** Resolves once playback has finished. */
+  /** Resolves once playback has finished. Throws if speech synthesis fails - there is no fallback voice. */
   async function speak(text: string, options: SpeakOptions): Promise<void> {
     if (!text.trim()) {
       return
     }
-
-    const onStart = (): void => setIsSpeaking(true)
-
-    return new Promise<void>((resolve) => {
-      const onEnd = (): void => {
-        setIsSpeaking(false)
-        resolve()
-      }
-
-      speakWithAiVoice(text, options.aiVoice, { onStart, onEnd })
-        .then((usedAiVoice) => {
-          if (!usedAiVoice) {
-            speechSynthesisService.speak(text, {
-              voiceName: options.voiceName,
-              rate: options.rate,
-              volume: options.volume,
-              onStart,
-              onEnd
-            })
-          }
-        })
-        .catch(() => {
-          speechSynthesisService.speak(text, {
-            voiceName: options.voiceName,
-            rate: options.rate,
-            volume: options.volume,
-            onStart,
-            onEnd
-          })
-        })
+    await speakWithAiVoice(text, options.aiVoice, options.speed, options.volume, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false)
     })
   }
 
   function stop(): void {
     stopAiVoice()
-    speechSynthesisService.stop()
     setIsSpeaking(false)
   }
 

@@ -1,5 +1,5 @@
-// Loads .env in development so OPENAI_API_KEY / USE_MOCK_AI are available.
-// Packaged builds get their API key from secure settings storage instead.
+// Loads .env in development so OPENAI_API_KEY is available. Packaged
+// builds get their API key from secure settings storage instead.
 // Silently does nothing if no .env file is present.
 import 'dotenv/config'
 

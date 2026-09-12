@@ -115,8 +115,8 @@ export function registerIpcHandlers(): void {
   })
 
   handle(IPC_CHANNELS.speechSynthesize, async (request: SynthesizeSpeechRequest): Promise<SynthesizeSpeechResponse> => {
-    const audioBuffer = await synthesizeSpeech(request.text, request.voice)
-    return { audioBase64: audioBuffer ? audioBuffer.toString('base64') : null }
+    const audioBuffer = await synthesizeSpeech(request.text, request.voice, request.speed)
+    return { audioBase64: audioBuffer.toString('base64') }
   })
 
   handle(IPC_CHANNELS.dialogPickResumeFile, async () => {

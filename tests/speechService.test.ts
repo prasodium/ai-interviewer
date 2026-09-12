@@ -47,11 +47,11 @@ describe('speechService', () => {
   beforeEach(() => {
     transcriptionsCreateMock.mockReset()
     speechCreateMock.mockReset()
-    delete process.env.USE_MOCK_AI
+    settingsService.clearApiKey()
+    delete process.env.OPENAI_API_KEY
   })
 
-  it('refuses to transcribe in mock mode, keeping it free', async () => {
-    process.env.USE_MOCK_AI = 'true'
+  it('refuses to transcribe with no API key configured', async () => {
     await expect(speechService.transcribeAudio(Buffer.from('audio'), 'audio/webm')).rejects.toThrow(AIRequestError)
     expect(transcriptionsCreateMock).not.toHaveBeenCalled()
   })
@@ -75,13 +75,8 @@ describe('speechService', () => {
     )
   })
 
-  it('returns null for speech synthesis in mock mode instead of calling OpenAI', async () => {
-    process.env.USE_MOCK_AI = 'true'
-    settingsService.storeApiKey('sk-test')
-
-    const result = await speechService.synthesizeSpeech('Hello', 'alloy')
-
-    expect(result).toBeNull()
+  it('refuses to synthesize speech with no API key configured', async () => {
+    await expect(speechService.synthesizeSpeech('Hello', 'alloy', 1)).rejects.toThrow(AIRequestError)
     expect(speechCreateMock).not.toHaveBeenCalled()
   })
 
@@ -90,18 +85,18 @@ describe('speechService', () => {
     const fakeAudio = new Uint8Array([1, 2, 3]).buffer
     speechCreateMock.mockResolvedValue({ arrayBuffer: async () => fakeAudio })
 
-    const result = await speechService.synthesizeSpeech('Hello', 'nova')
+    const result = await speechService.synthesizeSpeech('Hello', 'nova', 1.2)
 
     expect(result).toEqual(Buffer.from([1, 2, 3]))
-    expect(speechCreateMock).toHaveBeenCalledWith(expect.objectContaining({ voice: 'nova', model: 'tts-1' }))
+    expect(speechCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ voice: 'nova', model: 'tts-1', speed: 1.2 })
+    )
   })
 
-  it('falls back to null instead of throwing when speech synthesis fails', async () => {
+  it('throws a friendly error instead of silently failing when speech synthesis fails', async () => {
     settingsService.storeApiKey('sk-test')
     speechCreateMock.mockRejectedValue(new Error('network down'))
 
-    const result = await speechService.synthesizeSpeech('Hello', 'alloy')
-
-    expect(result).toBeNull()
+    await expect(speechService.synthesizeSpeech('Hello', 'alloy', 1)).rejects.toThrow(AIRequestError)
   })
 })
