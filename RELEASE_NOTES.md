@@ -1,36 +1,30 @@
-## AI Interviewer v1.1.0
+## AI Interviewer v1.0.0
 
 Practice job interviews with an AI interviewer that adapts to your resume
-and your answers.
+and your answers - fully hands-free, voice in and voice out.
 
-### What's new in v1.1.0
+### What it does
 
-- **Fixed voice input** - it previously failed silently because Electron's
-  bundled Chromium doesn't actually support the browser's speech
-  recognition API. Voice now records your microphone directly and
-  transcribes it with OpenAI Whisper.
-- **Natural AI voice** - the interviewer now speaks with an OpenAI TTS
-  voice instead of the more robotic default system voice (pick from 6
-  voices in Settings).
-- **Hands-free interview flow** - the mic listens automatically once the
-  interviewer finishes speaking and stops on its own when you go quiet, so
-  there's no click-to-talk button to manage mid-interview.
-- **Live conversation transcript** shown alongside the interview.
-- Fixed a macOS microphone permission bug where the app never showed the
-  permission prompt at all.
+- Pick a role, upload your resume, and start a spoken interview.
+- The interviewer opens with a natural icebreaker, then asks questions
+  based on your resume, the job description, and how you're answering -
+  following up on vague or interesting answers, adjusting difficulty as it
+  goes.
+- Just talk - the mic listens automatically after each question and stops
+  on its own once you go quiet. No click-to-talk button.
+- A live text transcript of the conversation is shown alongside the
+  interview.
+- At the end, get a full scored report: strengths, weaknesses, a
+  question-by-question breakdown, and what to study next.
+- Past interviews are saved locally so you can track progress over time.
 
-Voice input and the AI voice both require a real OpenAI API key (see
-below) - mock mode automatically falls back to typed answers and the free
-browser voice, so it stays free to try.
+### Requirements
 
-### What's included
-
-- Resume-aware, adaptive voice interviews
-- A free built-in mock interviewer mode - no API key required to try the app
-- Add your own OpenAI API key from **Settings** after installing - it's saved
-  encrypted on your device and stays active every time you open the app,
-  until you change or remove it
-- Local interview history and scored reports (SQLite, stored on your device)
+This app requires your own OpenAI API key - there is no offline or free
+mode. The entire pipeline (interview questions and evaluation, speech-to-
+text via Whisper, and natural voice output via TTS) runs on the OpenAI
+API, so every interview costs a small amount on your OpenAI account
+(typically well under $0.50 for a full interview with gpt-4o-mini).
 
 ### Downloads
 
@@ -42,13 +36,14 @@ browser voice, so it stays free to try.
 - **Windows:** download the `.exe` installer and run it. Windows SmartScreen
   may warn about an unrecognized publisher - choose **More info → Run anyway**.
 
-### Using your own OpenAI API key
+### Getting started
 
-1. Open the app and go to **Settings**.
-2. Paste your API key under **OpenAI API Key** and click **Save**.
-3. That's it - the app now uses real AI-generated questions, a natural
-   voice, and voice input every time you open it, until you remove or
-   replace the key.
+1. Install and open the app.
+2. Go to **Settings** and paste in your OpenAI API key - it's saved
+   encrypted on your device and stays active every time you open the app,
+   until you change or remove it.
+3. Start a new interview, upload your resume, and go.
 
-Without a key, the app runs in mock mode automatically, so you can try the
-full experience for free.
+On macOS, the first time you start an interview you'll be asked to grant
+microphone access - if you don't see the prompt, check System Settings →
+Privacy & Security → Microphone.
