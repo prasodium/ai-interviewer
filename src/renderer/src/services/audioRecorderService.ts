@@ -17,9 +17,11 @@ const SILENCE_RMS_THRESHOLD = 0.02
 export interface RecordingResult {
   blob: Blob
   mimeType: string
+  /** False if the volume never crossed the speech threshold during the whole recording - i.e. likely silence, not a real answer. */
+  detectedSpeech: boolean
 }
 
-export type AudioRecorderErrorReason = 'permission-denied' | 'unsupported' | 'cancelled' | 'unknown'
+export type AudioRecorderErrorReason = 'permission-denied' | 'unsupported' | 'cancelled' | 'no-speech-detected' | 'unknown'
 
 export class AudioRecorderError extends Error {
   reason: AudioRecorderErrorReason
@@ -38,6 +40,7 @@ export class AudioRecorderService {
   private pollTimer: ReturnType<typeof setInterval> | null = null
   private recording = false
   private rejectPending: ((error: AudioRecorderError) => void) | null = null
+  private hasDetectedSpeech = false
 
   isRecording(): boolean {
     return this.recording
@@ -79,6 +82,7 @@ export class AudioRecorderService {
     this.stream = stream
     this.chunks = []
     this.recording = true
+    this.hasDetectedSpeech = false
 
     const mimeType = pickSupportedMimeType()
     const effectiveMimeType = mimeType ?? 'audio/webm'
@@ -101,8 +105,9 @@ export class AudioRecorderService {
       this.mediaRecorder!.onstop = () => {
         this.rejectPending = null
         const blob = new Blob(this.chunks, { type: effectiveMimeType })
+        const detectedSpeech = this.hasDetectedSpeech
         this.cleanupHardware()
-        resolve({ blob, mimeType: effectiveMimeType })
+        resolve({ blob, mimeType: effectiveMimeType, detectedSpeech })
       }
 
       const startedAt = Date.now()
@@ -117,6 +122,7 @@ export class AudioRecorderService {
 
         if (rms > SILENCE_RMS_THRESHOLD) {
           lastLoudAt = now
+          this.hasDetectedSpeech = true
         }
 
         const elapsed = now - startedAt

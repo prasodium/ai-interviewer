@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLikelyEchoOfQuestion } from '../src/renderer/src/services/echoDetection'
+import { isLikelyEchoOfQuestion, isLikelySilenceHallucination } from '../src/renderer/src/services/echoDetection'
 
 describe('isLikelyEchoOfQuestion', () => {
   it('flags a near-verbatim echo of the question as not a real answer', () => {
@@ -33,5 +33,25 @@ describe('isLikelyEchoOfQuestion', () => {
 
   it('ignores very short answers regardless of overlap', () => {
     expect(isLikelyEchoOfQuestion('Tell me about software engineering.', 'software engineering')).toBe(false)
+  })
+})
+
+describe('isLikelySilenceHallucination', () => {
+  it('flags the exact Whisper hallucination seen in a real silent recording', () => {
+    expect(isLikelySilenceHallucination('Thank you for watching!')).toBe(true)
+    expect(isLikelySilenceHallucination('Thank you for watching.')).toBe(true)
+  })
+
+  it('flags other known silence-hallucination phrases', () => {
+    expect(isLikelySilenceHallucination('Please subscribe')).toBe(true)
+    expect(isLikelySilenceHallucination('bye bye')).toBe(true)
+  })
+
+  it('does not flag a genuine answer that happens to start with thanks', () => {
+    expect(
+      isLikelySilenceHallucination(
+        "Thank you for the question - I've worked mostly with React and Node over the past two years."
+      )
+    ).toBe(false)
   })
 })

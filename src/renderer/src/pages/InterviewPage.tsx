@@ -8,7 +8,7 @@ import TranscriptPanel from '../components/TranscriptPanel'
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis'
 import { useVoiceAnswer } from '../hooks/useVoiceAnswer'
 import { AudioRecorderError } from '../services/audioRecorderService'
-import { isLikelyEchoOfQuestion } from '../services/echoDetection'
+import { isLikelyEchoOfQuestion, isLikelySilenceHallucination } from '../services/echoDetection'
 import { api } from '../services/electronApi'
 import { useInterviewFlow } from '../state/InterviewFlowContext'
 import type { AiStatus, AppSettings, InterviewState } from '@shared/types'
@@ -160,10 +160,17 @@ export default function InterviewPage(): JSX.Element | null {
             setPhase('transcribing')
           } catch (err) {
             if (cancelledRef.current) return
-            const isUserCancelled = err instanceof AudioRecorderError && err.reason === 'cancelled'
+            const reason = err instanceof AudioRecorderError ? err.reason : null
+
+            if (reason === 'no-speech-detected' && echoRetriesLeft > 0) {
+              echoRetriesLeft -= 1
+              setError(err instanceof Error ? err.message : 'No speech detected.')
+              continue
+            }
+
             forceTextModeRef.current = true
             setForceTextMode(true)
-            if (!isUserCancelled) {
+            if (reason !== 'cancelled') {
               setError(err instanceof Error ? err.message : 'Voice input failed.')
             }
             setPhase('awaiting-text')
@@ -172,7 +179,8 @@ export default function InterviewPage(): JSX.Element | null {
             break
           }
 
-          const soundsLikeEcho = isLikelyEchoOfQuestion(reply, answerText)
+          const soundsLikeEcho =
+            isLikelyEchoOfQuestion(reply, answerText) || isLikelySilenceHallucination(answerText)
           if (!soundsLikeEcho) {
             setError(null)
             haveValidAnswer = true

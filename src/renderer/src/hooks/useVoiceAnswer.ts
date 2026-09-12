@@ -14,7 +14,17 @@ export function useVoiceAnswer() {
     setStatus('listening')
     setError(null)
     try {
-      const { blob, mimeType } = await recorderRef.current.start()
+      const { blob, mimeType, detectedSpeech } = await recorderRef.current.start()
+      if (!detectedSpeech) {
+        // Skip the Whisper call entirely - feeding it silence tends to
+        // produce hallucinated filler text (e.g. "Thank you for
+        // watching!", a well-known Whisper artifact) instead of an error,
+        // which would otherwise get treated as a real answer.
+        throw new AudioRecorderError(
+          'no-speech-detected',
+          "We didn't detect any speech. Please check your microphone, or try speaking again."
+        )
+      }
       setStatus('transcribing')
       const text = await transcribeRecording(blob, mimeType)
       setStatus('idle')
