@@ -32,6 +32,16 @@ function addMessage(state: InterviewState, speaker: InterviewMessage['speaker'],
   state.transcript.push({ speaker, text, timestamp: nowIso() })
 }
 
+/**
+ * Real interviewers open with rapport-building, not a hard question - so
+ * the very first question is always this fixed icebreaker rather than
+ * something the AI decides on the fly. This also saves one AI call per
+ * interview.
+ */
+function buildOpeningQuestion(setup: InterviewSetupOptions): string {
+  return `Hi, thanks for taking the time today. I'll be conducting your ${setup.jobRole} interview. Before we get into specifics, tell me a bit about yourself and what interests you about this role.`
+}
+
 interface InterviewSession {
   state: InterviewState
   resumeInformation: ResumeInformation | null
@@ -85,18 +95,15 @@ export async function startInterview(
     completedAt: null
   }
 
-  const ai = getInterviewAI()
-  const context: InterviewContext = { state, resumeInformation, jobMatch }
-  const questionResponse = await ai.createQuestion(context)
-
-  state.currentQuestion = questionResponse.question
-  state.currentTopic = questionResponse.topic
-  state.questionsAsked.push(questionResponse.question)
-  addMessage(state, 'interviewer', questionResponse.question)
+  const openingQuestion = buildOpeningQuestion(setup)
+  state.currentQuestion = openingQuestion
+  state.currentTopic = 'Introduction'
+  state.questionsAsked.push(openingQuestion)
+  addMessage(state, 'interviewer', openingQuestion)
 
   interviewRepository.createInterview(state, resumeInformation, jobMatch)
 
-  return { state, interviewerReply: questionResponse.question }
+  return { state, interviewerReply: openingQuestion }
 }
 
 const CLOSING_MESSAGE = 'That concludes the interview. Thank you.'

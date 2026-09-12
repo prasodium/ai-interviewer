@@ -40,6 +40,12 @@ describe('interview completion flow (mock AI)', () => {
     rmSync(testDataDir, { recursive: true, force: true })
   })
 
+  it('always opens with a fixed personal icebreaker rather than an AI-chosen question', async () => {
+    const started = await interviewEngine.startInterview(setup, null, null)
+    expect(started.interviewerReply.toLowerCase()).toContain('tell me a bit about yourself')
+    expect(started.state.currentTopic).toBe('Introduction')
+  })
+
   it('runs a full interview from start to a saved final report', async () => {
     const started = await interviewEngine.startInterview(setup, null, null)
     expect(started.state.questionNumber).toBe(1)

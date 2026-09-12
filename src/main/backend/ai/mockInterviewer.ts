@@ -76,16 +76,8 @@ export class MockInterviewer implements InterviewAI {
   async createQuestion(context: InterviewContext): Promise<InterviewerQuestionResponse> {
     const { state } = context
 
-    if (state.questionNumber === 1) {
-      return {
-        action: 'ask_question',
-        question: `Tell me about yourself and your experience relevant to the ${state.setup.jobRole} role.`,
-        topic: 'Introduction',
-        difficulty: state.setup.difficulty,
-        reason: 'Opening question to let the candidate introduce themselves.'
-      }
-    }
-
+    // The opening icebreaker is asked directly by the interview engine
+    // (not the AI) before this is ever called - see interviewEngine.ts.
     const project = pickProjectToAskAbout(context)
     if (project && state.questionRecords.length < 3) {
       return {

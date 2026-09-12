@@ -8,15 +8,14 @@ interface SpeakOptions {
   voiceName: string | null
   rate: number
   volume: number
-  muted: boolean
 }
 
 export function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false)
 
-  /** Resolves once playback has finished (or immediately if muted). */
+  /** Resolves once playback has finished. */
   async function speak(text: string, options: SpeakOptions): Promise<void> {
-    if (options.muted || !text.trim()) {
+    if (!text.trim()) {
       return
     }
 

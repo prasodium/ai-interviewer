@@ -458,37 +458,6 @@ a {
   gap: 16px;
 }
 
-.mic-button {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 120ms ease, transform 120ms ease;
-}
-
-.mic-button:not(:disabled):hover {
-  background: var(--color-primary-hover);
-}
-
-.mic-button[aria-pressed='true'] {
-  background: var(--color-danger);
-}
-
-.mic-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.mic-button--muted-hint {
-  background: var(--color-text-muted);
-}
-
 .fallback-answer {
   width: 100%;
   max-width: 480px;

@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Button from '../components/Button'
 import InterviewAvatar, { type AvatarState } from '../components/InterviewAvatar'
 import InterviewProgress from '../components/InterviewProgress'
 import InterviewTimer from '../components/InterviewTimer'
-import MicrophoneButton from '../components/MicrophoneButton'
 import QuestionDisplay from '../components/QuestionDisplay'
 import TranscriptPanel from '../components/TranscriptPanel'
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis'
@@ -15,6 +13,14 @@ import { useInterviewFlow } from '../state/InterviewFlowContext'
 import type { AiStatus, AppSettings, InterviewState } from '@shared/types'
 import type { AnswerInterviewResponse } from '@shared/ipc'
 
+/**
+ * The interview is fully hands-free by design: the AI speaks, the mic
+ * listens automatically and stops on its own once the candidate goes
+ * quiet, and the next question follows - no buttons to press mid-answer.
+ * The only manual control is ending the interview early. Typing is used
+ * automatically (never as a button the candidate has to choose) when
+ * voice genuinely isn't available.
+ */
 type InterviewPhase =
   | 'loading'
   | 'speaking'
@@ -53,7 +59,6 @@ export default function InterviewPage(): JSX.Element | null {
   const [error, setError] = useState<string | null>(null)
   const [forceTextMode, setForceTextMode] = useState(false)
   const [typedAnswer, setTypedAnswer] = useState('')
-  const [isMuted, setIsMuted] = useState(false)
   const [voiceSettings, setVoiceSettings] = useState<AppSettings | null>(null)
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null)
 
@@ -61,7 +66,6 @@ export default function InterviewPage(): JSX.Element | null {
   const cancelledRef = useRef(false)
   const isAnsweringRef = useRef(false)
   const forceTextModeRef = useRef(false)
-  const isMutedRef = useRef(false)
   const pendingTextResolveRef = useRef<((text: string) => void) | null>(null)
 
   const synthesis = useSpeechSynthesis()
@@ -82,20 +86,6 @@ export default function InterviewPage(): JSX.Element | null {
     }
     // Runs once on mount only - voiceAnswer/synthesis identities are stable enough for this setup+cleanup pair.
   }, [])
-
-  function updateMuted(muted: boolean): void {
-    isMutedRef.current = muted
-    setIsMuted(muted)
-    if (muted) {
-      synthesis.stop()
-    }
-  }
-
-  function switchToTyping(): void {
-    forceTextModeRef.current = true
-    setForceTextMode(true)
-    voiceAnswer.cancel()
-  }
 
   function waitForManualTextSubmit(): Promise<string> {
     return new Promise<string>((resolve) => {
@@ -134,8 +124,7 @@ export default function InterviewPage(): JSX.Element | null {
         aiVoice: voiceSettings!.aiVoice,
         voiceName: voiceSettings!.voiceName,
         rate: voiceSettings!.voiceSpeed,
-        volume: voiceSettings!.voiceVolume,
-        muted: isMutedRef.current
+        volume: voiceSettings!.voiceVolume
       })
       if (cancelledRef.current) return
 
@@ -218,10 +207,6 @@ export default function InterviewPage(): JSX.Element | null {
     // Intentionally depends only on [setup, voiceSettings] - hasStartedRef prevents re-entry.
   }, [setup, voiceSettings])
 
-  function handleMicClick(): void {
-    voiceAnswer.stopListening()
-  }
-
   function handleTimeUp(): void {
     if (cancelledRef.current || !interviewState || interviewState.interviewFinished) {
       return
@@ -295,29 +280,10 @@ export default function InterviewPage(): JSX.Element | null {
           <InterviewAvatar state={avatarState} />
           <QuestionDisplay question={interviewState?.currentQuestion || ''} />
           <div className="interview-status">{statusText}</div>
-
-          <div className="row">
-            <Button variant="secondary" onClick={() => updateMuted(!isMuted)}>
-              {isMuted ? 'Unmute' : 'Mute'}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => interviewState && synthesis.speak(interviewState.currentQuestion, {
-                aiVoice: voiceSettings!.aiVoice,
-                voiceName: voiceSettings!.voiceName,
-                rate: voiceSettings!.voiceSpeed,
-                volume: voiceSettings!.voiceVolume,
-                muted: false
-              })}
-              disabled={!interviewState?.currentQuestion || phase === 'listening'}
-            >
-              Replay
-            </Button>
-          </div>
         </div>
 
         <div className="interview-bottom">
-          {forceTextMode || phase === 'awaiting-text' ? (
+          {forceTextMode && (
             <div className="fallback-answer stack">
               <textarea
                 value={typedAnswer}
@@ -325,22 +291,15 @@ export default function InterviewPage(): JSX.Element | null {
                 placeholder="Type your answer here"
                 disabled={phase !== 'awaiting-text'}
               />
-              <Button onClick={handleManualSubmit} disabled={phase !== 'awaiting-text' || !typedAnswer.trim()}>
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={handleManualSubmit}
+                disabled={phase !== 'awaiting-text' || !typedAnswer.trim()}
+              >
                 Submit Answer
-              </Button>
-            </div>
-          ) : (
-            <>
-              <MicrophoneButton isListening={phase === 'listening'} disabled={phase !== 'listening'} onClick={handleMicClick} />
-              <p className="text-muted" style={{ fontSize: 13 }}>
-                {phase === 'listening'
-                  ? "Listening - click the mic when you're done, or just stop talking."
-                  : 'The mic listens automatically after each question.'}
-              </p>
-              <button type="button" className="button button--secondary" onClick={switchToTyping}>
-                Type answer instead
               </button>
-            </>
+            </div>
           )}
 
           <button type="button" className="button button--danger" onClick={handleEndInterview}>

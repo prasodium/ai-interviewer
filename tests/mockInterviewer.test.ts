@@ -39,12 +39,6 @@ function context(overrides: Partial<InterviewState> = {}): InterviewContext {
 }
 
 describe('MockInterviewer.createQuestion', () => {
-  it('asks an introductory question first', async () => {
-    const interviewer = new MockInterviewer()
-    const result = await interviewer.createQuestion(context())
-    expect(result.question.toLowerCase()).toContain('tell me about yourself')
-  })
-
   it('never repeats a question that has already been asked', async () => {
     const interviewer = new MockInterviewer()
     const askedQuestions: string[] = []
