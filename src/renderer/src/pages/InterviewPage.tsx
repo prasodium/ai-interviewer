@@ -199,6 +199,10 @@ export default function InterviewPage(): JSX.Element | null {
     api.interview
       .start({ setup, resumeAnalysis })
       .then(({ state, interviewerReply }) => {
+        // React's StrictMode fires the mount effect's cleanup once as a
+        // dev-only check, which sets cancelledRef true before the real
+        // run ever starts - clear it here, right as the real work begins.
+        cancelledRef.current = false
         setInterviewState(state)
         setActiveInterviewId(state.interviewId)
         runInterviewLoop(state, interviewerReply)
