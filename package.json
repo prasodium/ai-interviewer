@@ -1,6 +1,6 @@
 {
   "name": "ai-interviewer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Practice realistic job interviews with an AI interviewer",
   "main": "out/main/index.js",
   "author": "AI Interviewer",

@@ -1,7 +1,18 @@
-## AI Interviewer v1.0.0
+## AI Interviewer v1.1.0
 
 Practice job interviews with an AI interviewer that adapts to your resume
-and your answers - fully hands-free, voice in and voice out.
+and your answers - fully hands-free, voice in and voice out, with
+retrieval-grounded study recommendations.
+
+### What's new in v1.1.0
+
+- **Retrieval-augmented study recommendations.** The final report now
+  retrieves relevant notes from a curated interview-prep knowledge base
+  (system design, SQL, Kafka, ML evaluation metrics, embedded systems,
+  behavioral technique, and more) based on whichever topics you scored
+  weakest on, and grounds its recommendations in them. The retrieved notes
+  are shown verbatim on the results page under "Suggested study resources."
+- **License added.** All rights reserved - see `LICENSE`.
 
 ### What it does
 
@@ -15,16 +26,18 @@ and your answers - fully hands-free, voice in and voice out.
 - A live text transcript of the conversation is shown alongside the
   interview.
 - At the end, get a full scored report: strengths, weaknesses, a
-  question-by-question breakdown, and what to study next.
+  question-by-question breakdown, and grounded study recommendations for
+  what to work on next.
 - Past interviews are saved locally so you can track progress over time.
 
 ### Requirements
 
 This app requires your own OpenAI API key - there is no offline or free
 mode. The entire pipeline (interview questions and evaluation, speech-to-
-text via Whisper, and natural voice output via TTS) runs on the OpenAI
-API, so every interview costs a small amount on your OpenAI account
-(typically well under $0.50 for a full interview with gpt-4o-mini).
+text via Whisper, natural voice output via TTS, and study-note retrieval
+via embeddings) runs on the OpenAI API, so every interview costs a small
+amount on your OpenAI account (typically well under $0.50 for a full
+interview with gpt-4o-mini).
 
 ### Downloads
 
