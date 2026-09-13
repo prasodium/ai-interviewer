@@ -188,3 +188,9 @@ and interview transcripts are sent to OpenAI to generate questions,
 evaluate answers, and produce speech - that's inherent to how the app
 works, since it requires an API key to function at all. Use **Settings →
 Clear Interview History** to delete everything stored locally.
+
+## License
+
+All rights reserved. See [LICENSE](LICENSE) - this code may not be used,
+copied, modified, or distributed without prior written permission from the
+copyright holder.
