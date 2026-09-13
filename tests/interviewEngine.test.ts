@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import type { InterviewSetupOptions } from '@shared/types'
+import type { InterviewSetupOptions, InterviewState } from '@shared/types'
+import knowledgeBaseEmbeddings from '../src/main/backend/rag/knowledgeBaseEmbeddings.json'
 
 const testDataDir = mkdtempSync(join(tmpdir(), 'ai-interviewer-test-'))
 
@@ -68,10 +69,22 @@ const chatCompletionsCreateMock = vi.fn(async ({ messages }: { messages: { role:
   return { choices: [{ message: { content: JSON.stringify(responseObject) } }] }
 })
 
+// Returns the real precomputed embedding for the "SQL indexing" note, so
+// a mocked query embedding deterministically ranks that note as the top
+// RAG match - no real embeddings API call needed to test the retrieval
+// and grounding wiring end to end.
+const embeddingsCreateMock = vi.fn(async () => {
+  const sqlEmbeddingRecord = (knowledgeBaseEmbeddings as { id: string; embedding: number[] }[]).find(
+    (record) => record.id === 'sql-indexing'
+  )
+  return { data: [{ embedding: sqlEmbeddingRecord!.embedding }] }
+})
+
 vi.mock('openai', () => {
   class MockOpenAI {
     static AuthenticationError = class extends Error {}
     chat = { completions: { create: chatCompletionsCreateMock } }
+    embeddings = { create: embeddingsCreateMock }
   }
   return { default: MockOpenAI }
 })
@@ -150,6 +163,49 @@ describe('interview completion flow', () => {
     }
 
     await expect(interviewEngine.submitAnswer(current.interviewId, 'one more answer')).rejects.toThrow()
+  })
+
+  it('grounds the final report in retrieved study notes for the candidate\'s weak topics (RAG)', async () => {
+    const interviewId = 'rag-test-interview'
+    const state: InterviewState = {
+      interviewId,
+      setup,
+      currentQuestion: '',
+      questionNumber: 2,
+      totalQuestions: 5,
+      questionsAsked: ['Tell me about yourself.', 'How would you speed up a slow SQL query?'],
+      currentTopic: 'SQL',
+      transcript: [],
+      questionRecords: [
+        {
+          question: 'How would you speed up a slow SQL query?',
+          answer: 'Not sure, maybe restart the database?',
+          topic: 'SQL',
+          evaluation: {
+            score: 3,
+            technicalAccuracy: 3,
+            relevance: 4,
+            communication: 4,
+            strengths: [],
+            weaknesses: ['Lacked depth on query analysis']
+          }
+        }
+      ],
+      candidateScore: 30,
+      interviewFinished: false,
+      startedAt: new Date().toISOString(),
+      completedAt: null
+    }
+    interviewRepository.createInterview(state, null, null)
+
+    const finalReport = await interviewEngine.finishInterview(interviewId)
+
+    expect(embeddingsCreateMock).toHaveBeenCalled()
+    expect(finalReport.groundedResources.length).toBeGreaterThan(0)
+    expect(finalReport.groundedResources[0].title).toBe('Diagnosing a slow SQL query')
+
+    const saved = interviewRepository.getInterviewDetail(interviewId)
+    expect(saved?.finalReport.groundedResources[0].title).toBe('Diagnosing a slow SQL query')
   })
 
   it('fails clearly when no API key is configured', async () => {

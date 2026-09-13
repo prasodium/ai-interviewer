@@ -96,6 +96,13 @@ export interface FinalReportScores {
   roleReadiness: number
 }
 
+/** A curated study note retrieved (via embedding similarity search) for the candidate's weaker topics. */
+export interface GroundedResource {
+  title: string
+  topic: string
+  content: string
+}
+
 export interface FinalReport {
   scores: FinalReportScores
   strengths: string[]
@@ -105,6 +112,8 @@ export interface FinalReport {
   questionsPerformedWell: string[]
   recommendedTopics: string[]
   improvementPlan: string[]
+  /** Populated by retrieval after the AI generates the report - not something the model produces itself. */
+  groundedResources: GroundedResource[]
 }
 
 export interface SavedInterview {

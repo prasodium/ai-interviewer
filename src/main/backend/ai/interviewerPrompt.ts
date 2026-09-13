@@ -142,6 +142,16 @@ Evaluate this answer and decide if a follow-up question is warranted before movi
 }`
 }
 
+function buildStudyNotesBlock(context: InterviewContext): string {
+  if (!context.relevantStudyNotes || context.relevantStudyNotes.length === 0) {
+    return ''
+  }
+  const notes = context.relevantStudyNotes
+    .map((note) => `- ${note.title} (${note.topic}): ${note.content}`)
+    .join('\n')
+  return `\nRelevant study notes retrieved for this candidate's weaker topics - ground "recommendedTopics" and "improvementPlan" in these specific concepts where relevant, rather than generic advice:\n${notes}\n`
+}
+
 export function buildFinalReportPrompt(context: InterviewContext): string {
   const { state } = context
   const questionSummaries = state.questionRecords
@@ -157,7 +167,7 @@ ${buildCandidateProfileBlock(context)}
 
 The interview is complete. Here is the full question-by-question record:
 ${questionSummaries || 'No questions were answered.'}
-
+${buildStudyNotesBlock(context)}
 Produce a final interview report. Respond ONLY with JSON in this exact shape:
 {
   "scores": {

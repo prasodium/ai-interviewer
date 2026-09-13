@@ -3,6 +3,7 @@ import { MAX_ANSWER_CHARACTERS, MAX_INTERVIEW_QUESTIONS, QUESTIONS_PER_MINUTE } 
 import { getInterviewAI } from '../ai/aiFactory'
 import type { AnswerContext, InterviewContext } from '../ai/interviewAI'
 import * as interviewRepository from '../database/interviewRepository'
+import { retrieveStudyNotes } from '../rag/studyNotesRetrieval'
 import { calculateRunningScore } from './scoreCalculator'
 import type {
   FinalReport,
@@ -26,6 +27,15 @@ function computeTotalQuestions(lengthMinutes: number): number {
 
 function nowIso(): string {
   return new Date().toISOString()
+}
+
+const WEAK_ANSWER_SCORE_THRESHOLD = 6
+
+function getWeakTopics(state: InterviewState): string[] {
+  const weakTopics = state.questionRecords
+    .filter((record) => record.evaluation.score < WEAK_ANSWER_SCORE_THRESHOLD)
+    .map((record) => record.topic)
+  return Array.from(new Set(weakTopics))
 }
 
 function addMessage(state: InterviewState, speaker: InterviewMessage['speaker'], text: string): void {
@@ -185,8 +195,15 @@ export async function finishInterview(interviewId: string): Promise<FinalReport>
     state.currentQuestion = ''
   }
 
+  const relevantStudyNotes = await retrieveStudyNotes(getWeakTopics(state))
+
   const ai = getInterviewAI()
-  const finalReport = await ai.createFinalReport(toContext(session))
+  const finalReport = await ai.createFinalReport({ ...toContext(session), relevantStudyNotes })
+  finalReport.groundedResources = relevantStudyNotes.map((note) => ({
+    title: note.title,
+    topic: note.topic,
+    content: note.content
+  }))
 
   interviewRepository.saveInterviewState(state)
   interviewRepository.finishInterview(interviewId, finalReport)

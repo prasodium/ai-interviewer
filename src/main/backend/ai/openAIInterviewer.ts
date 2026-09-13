@@ -102,7 +102,9 @@ export class OpenAIInterviewer implements InterviewAI {
       questionsStruggled: toStringArray(raw.questionsStruggled),
       questionsPerformedWell: toStringArray(raw.questionsPerformedWell),
       recommendedTopics: toStringArray(raw.recommendedTopics),
-      improvementPlan: toStringArray(raw.improvementPlan)
+      improvementPlan: toStringArray(raw.improvementPlan),
+      // Populated by the interview engine after retrieval, not by the model itself.
+      groundedResources: []
     }
   }
 

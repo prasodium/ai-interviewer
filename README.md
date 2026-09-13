@@ -19,7 +19,9 @@ a time, adapts to your answers, and gives you a scored report at the end.
    vague or interesting answers, and adapts difficulty as you go. The full
    conversation is shown as text alongside the interview.
 5. When the interview ends, you get a full report: scores, strengths,
-   weaknesses, a question-by-question breakdown, and suggested next steps.
+   weaknesses, a question-by-question breakdown, and suggested next steps -
+   grounded in specific study notes retrieved for your weaker topics (see
+   "Study recommendations" below).
 6. Past interviews are saved locally so you can track progress over time.
 
 ## Features
@@ -33,6 +35,9 @@ a time, adapts to your answers, and gives you a scored report at the end.
 - Local SQLite storage for interview history - resumes and transcripts never
   leave your machine except to OpenAI, for generating questions/feedback/voice
 - API keys are encrypted at rest via the OS keychain (Electron `safeStorage`)
+- Retrieval-augmented study recommendations: the final report is grounded in
+  a curated knowledge base retrieved by embedding similarity, not just the
+  model's own general knowledge (see "Study recommendations" below)
 
 The entire pipeline - interview questions, evaluation, speech-to-text, and
 text-to-speech - runs on the OpenAI API. An API key is required; there is no
@@ -73,6 +78,35 @@ the question back - both are safety nets against acoustic feedback and
 Whisper's tendency to hallucinate stock phrases ("Thank you for watching!")
 when fed silence.
 
+## Study recommendations (RAG)
+
+The final report's study recommendations are grounded with retrieval-
+augmented generation, not left purely to the model's general knowledge.
+`src/main/backend/rag/knowledgeBase.json` is a curated set of short,
+substantive interview-prep notes (system design, SQL, Kafka, ML
+evaluation metrics, embedded systems, behavioral answers, etc.), each
+embedded once with OpenAI's `text-embedding-3-small` model and committed
+to the repo (`knowledgeBaseEmbeddings.json`) - the app never re-embeds the
+knowledge base at runtime.
+
+When an interview finishes, the app looks at which topics the candidate
+scored weakest on, embeds a single short query from those topics, and
+retrieves the most relevant notes. Retrieval is hybrid, not purely
+semantic: notes whose topic exactly matches one of the weak topics (e.g.
+the interview was literally about "Kafka") are ranked first, with
+embedding similarity as the ranker within that group and as the fallback
+when no note has a matching topic - pure semantic search on a short query
+like "Kafka, Data Modeling" tended to drift toward generically related
+content instead of the specific topic, which exact-topic priority fixes.
+The retrieved notes are injected into the final-report prompt (instructing
+the model to ground its recommendations in them) and shown to the user
+verbatim under "Suggested study resources" on the results page, so what
+the report says isn't just a generated paraphrase - the source notes are
+visible.
+
+To add more notes, edit `knowledgeBase.json` and run
+`npm run generate-kb-embeddings` to refresh the precomputed embeddings.
+
 ## Project structure
 
 ```
@@ -82,6 +116,7 @@ src/
       ai/          InterviewAI interface + the OpenAI implementation, speech (Whisper/TTS)
       resume/      PDF text extraction, resume/job-description analysis
       interview/   Interview state machine, scoring
+      rag/         Knowledge base + embedding retrieval for study recommendations
       database/    SQLite access
     services/      Settings storage, logging
     ipc.ts         All IPC handlers registered here
@@ -90,6 +125,7 @@ src/
   preload/         contextBridge - the only bridge into the renderer
   renderer/        React app (pages, components, hooks, services)
   shared/          Types and constants used by both processes
+scripts/           Dev-only tooling (e.g. precomputing RAG embeddings)
 tests/             Vitest tests for the logic in src/main
 ```
 

@@ -68,6 +68,24 @@ export default function ResultsPage(): JSX.Element {
         <ReportSection title="Most important mistakes" items={detail.finalReport.mostImportantMistakes} />
         <ReportSection title="Recommended topics to study" items={detail.finalReport.recommendedTopics} />
         <ReportSection title="Recommended next steps" items={detail.finalReport.improvementPlan} />
+
+        {detail.finalReport.groundedResources.length > 0 && (
+          <ReportSection title="Suggested study resources">
+            <div className="stack">
+              {detail.finalReport.groundedResources.map((resource, index) => (
+                <div key={index}>
+                  <div className="row row--space-between">
+                    <strong>{resource.title}</strong>
+                    <span className="tag">{resource.topic}</span>
+                  </div>
+                  <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                    {resource.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </ReportSection>
+        )}
       </div>
 
       {detail.questionRecords.length > 0 && (

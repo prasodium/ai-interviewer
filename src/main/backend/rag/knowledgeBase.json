@@ -1,0 +1,236 @@
+[
+  {
+    "id": "system-design-horizontal-scaling",
+    "topic": "System Design",
+    "title": "Horizontal vs vertical scaling",
+    "content": "Vertical scaling means adding more CPU/RAM to a single machine - simple, but has a hard ceiling and a single point of failure. Horizontal scaling means adding more machines behind a load balancer. It requires the application to be stateless (or externalize state to a shared store like Redis or a database) so any instance can handle any request. Most large-scale systems favor horizontal scaling because it also improves fault tolerance - losing one node doesn't take the system down."
+  },
+  {
+    "id": "system-design-caching",
+    "topic": "System Design",
+    "title": "Caching strategies",
+    "content": "Cache-aside (lazy loading): the app checks the cache first, and on a miss, reads from the database and populates the cache. Write-through: writes go to the cache and the database together, keeping them consistent but adding write latency. Write-behind: writes go to the cache immediately and are flushed to the database asynchronously - faster, but risks data loss if the cache fails before flushing. Always pair caching with a clear invalidation strategy (TTL, explicit invalidation on write) - stale cache data is a common source of subtle bugs."
+  },
+  {
+    "id": "system-design-load-balancing",
+    "topic": "System Design",
+    "title": "Load balancing approaches",
+    "content": "Round robin distributes requests evenly regardless of load, which is simple but can overload slower instances. Least-connections routes to whichever backend currently has the fewest active requests, adapting better to uneven request costs. Consistent hashing routes based on a hash of the request key (e.g. user ID), which is important for cache locality and sharding, since it minimizes redistribution when nodes are added or removed."
+  },
+  {
+    "id": "system-design-cap-theorem",
+    "topic": "System Design",
+    "title": "CAP theorem in practice",
+    "content": "CAP theorem says a distributed system can only guarantee two of Consistency, Availability, and Partition tolerance at once - and since network partitions are unavoidable in practice, the real choice is between consistency and availability during a partition. Systems like traditional relational databases lean CP (reject requests rather than serve stale data); systems like DynamoDB or Cassandra lean AP (stay available, accept eventual consistency). Be ready to explain which tradeoff fits a given use case and why."
+  },
+  {
+    "id": "sql-indexing",
+    "topic": "SQL",
+    "title": "Diagnosing a slow SQL query",
+    "content": "Start with EXPLAIN (or EXPLAIN ANALYZE) to see the query plan - look for full table scans where an index scan was expected. Common fixes: add an index on columns used in WHERE/JOIN/ORDER BY, check that composite index column order matches query filter order, avoid functions wrapped around indexed columns (they prevent index use), and check if the table has grown enough that a query which was fine at low volume now needs a different plan entirely (e.g. partitioning)."
+  },
+  {
+    "id": "sql-normalization",
+    "topic": "SQL",
+    "title": "Normalization vs denormalization",
+    "content": "Normalization (1NF-3NF) reduces data duplication by splitting data into related tables, which keeps writes consistent and storage efficient - the tradeoff is more joins on read. Denormalization intentionally duplicates data to avoid joins, trading storage and write complexity for faster reads. OLTP systems (frequent small writes) usually favor more normalization; OLAP/analytics systems (read-heavy, aggregation-focused) often denormalize deliberately, e.g. star schemas in a data warehouse."
+  },
+  {
+    "id": "sql-acid",
+    "topic": "SQL",
+    "title": "ACID transactions",
+    "content": "Atomicity: a transaction's operations all succeed or all roll back together. Consistency: a transaction moves the database from one valid state to another, respecting constraints. Isolation: concurrent transactions don't see each other's uncommitted changes (isolation levels like READ COMMITTED vs SERIALIZABLE trade correctness for throughput). Durability: once committed, data survives a crash. Understanding isolation levels specifically is a common interview probe, since it's where real bugs (dirty reads, phantom reads) show up."
+  },
+  {
+    "id": "databases-sql-vs-nosql",
+    "topic": "Databases",
+    "title": "Choosing SQL vs NoSQL",
+    "content": "Relational databases fit well-structured data with complex relationships and a need for strong consistency and ad-hoc querying (joins, transactions). NoSQL databases (document, key-value, wide-column, graph) fit when the access pattern is known upfront and simple, when schema flexibility matters, or when horizontal scale outweighs strict consistency needs. The honest answer in an interview is rarely 'NoSQL is faster' - it's about matching the data model and access pattern to the right tool."
+  },
+  {
+    "id": "data-engineering-kafka-basics",
+    "topic": "Kafka",
+    "title": "Kafka partitions and consumer groups",
+    "content": "A Kafka topic is split into partitions, and each partition is consumed by at most one consumer within a consumer group at a time - this is what gives parallel, ordered-per-partition processing. More partitions allow more parallel consumers, but each message within a single partition is strictly ordered while ordering across partitions is not guaranteed. Rebalancing happens when consumers join or leave the group, briefly pausing consumption while partitions are reassigned."
+  },
+  {
+    "id": "data-engineering-kafka-failures",
+    "topic": "Kafka",
+    "title": "Handling Kafka consumer failures",
+    "content": "Commit offsets only after successfully processing a message (at-least-once) rather than before (at-most-once), accepting that a crash mid-processing may cause a duplicate reprocess - so downstream processing should be idempotent. Use a dead-letter topic for messages that repeatedly fail processing, rather than blocking the partition indefinitely. Monitor consumer lag (how far behind the latest offset a consumer group is) as the primary health signal for a Kafka pipeline."
+  },
+  {
+    "id": "data-engineering-etl",
+    "topic": "ETL",
+    "title": "ETL vs ELT",
+    "content": "ETL (Extract, Transform, Load) transforms data before loading it into the destination, which was necessary when compute was expensive relative to storage. ELT (Extract, Load, Transform) loads raw data first and transforms it inside the destination warehouse (e.g. using SQL or dbt), taking advantage of cheap, scalable compute in modern warehouses like Snowflake or BigQuery. ELT also preserves raw data for reprocessing if transformation logic changes later."
+  },
+  {
+    "id": "data-engineering-data-modeling",
+    "topic": "Data Modeling",
+    "title": "Star schema for analytics",
+    "content": "A star schema has a central fact table (measurable events - e.g. orders, with foreign keys and metrics like quantity/amount) surrounded by dimension tables (descriptive attributes - e.g. customer, product, date). It's optimized for read-heavy analytical queries: fewer joins than a fully normalized schema, and dimension tables are small enough to scan quickly. Slowly changing dimensions (SCDs) are the standard technique for tracking how a dimension's attributes change over time."
+  },
+  {
+    "id": "data-engineering-spark",
+    "topic": "Spark",
+    "title": "Spark's lazy evaluation and partitioning",
+    "content": "Spark builds a DAG of transformations (map, filter, join) lazily and only executes when an action (count, collect, write) triggers it, which lets it optimize the whole pipeline before running. Data is split into partitions processed in parallel across executors - too few partitions underutilizes the cluster, too many adds scheduling overhead. Shuffles (repartitioning data across the network, e.g. for a groupBy or join) are typically the most expensive operation and the first place to look when a Spark job is slow."
+  },
+  {
+    "id": "data-warehousing-basics",
+    "topic": "Data Warehousing",
+    "title": "OLTP vs OLAP",
+    "content": "OLTP (Online Transaction Processing) systems handle many small, fast read/write transactions - think a production application database. OLAP (Online Analytical Processing) systems handle fewer, larger queries that aggregate across huge volumes of historical data - think a data warehouse powering dashboards. Running analytical queries directly against an OLTP database is a common anti-pattern since it competes with production traffic; a warehouse (often fed via ETL/ELT) exists specifically to isolate that load."
+  },
+  {
+    "id": "algorithms-big-o",
+    "topic": "Algorithms",
+    "title": "Big-O complexity in interviews",
+    "content": "Big-O describes how runtime or memory scales with input size, not the exact runtime. When answering a coding question, state the time and space complexity of your solution and be ready to explain the bottleneck (e.g. a nested loop is O(n^2), a hash map lookup is O(1) average case). Common patterns worth having ready: two-pointer for sorted arrays, sliding window for subarray/substring problems, and hash maps for O(n) lookups instead of nested loops."
+  },
+  {
+    "id": "data-structures-hash-maps",
+    "topic": "Data Structures",
+    "title": "When hash maps beat other structures",
+    "content": "Hash maps give O(1) average-case lookup, insert, and delete by trading away ordering - if you need sorted iteration, a balanced tree (like a TreeMap) is the right structure instead, at O(log n) per operation. Hash collisions degrade worst-case performance to O(n); a good hash function and appropriate load factor keep this rare in practice. A frequent interview pattern is using a hash map to turn an O(n^2) brute-force search into an O(n) single pass."
+  },
+  {
+    "id": "oop-solid",
+    "topic": "OOP",
+    "title": "SOLID principles, briefly",
+    "content": "Single Responsibility: a class should have one reason to change. Open/Closed: open for extension, closed for modification - favor adding new code over editing existing code to add behavior. Liskov Substitution: subclasses should be usable anywhere their base class is expected without breaking correctness. Interface Segregation: prefer several small, specific interfaces over one large general one. Dependency Inversion: depend on abstractions, not concrete implementations. These are guidelines, not laws - be ready to discuss when strictly following one would over-engineer a simple problem."
+  },
+  {
+    "id": "apis-rest-principles",
+    "topic": "APIs",
+    "title": "REST API design and idempotency",
+    "content": "REST resources are nouns (/users/123), and HTTP methods express the action: GET (read, safe and idempotent), POST (create, not idempotent), PUT (replace, idempotent), PATCH (partial update, not necessarily idempotent), DELETE (idempotent). Idempotent means calling it multiple times has the same effect as calling it once - important for safe retries over an unreliable network. Use proper status codes (201 for created, 404 for not found, 409 for conflict) rather than always returning 200 with an error message in the body."
+  },
+  {
+    "id": "testing-pyramid",
+    "topic": "Testing",
+    "title": "The testing pyramid",
+    "content": "Unit tests (many, fast, test one function/class in isolation with mocked dependencies) form the base. Integration tests (fewer, test how components work together - e.g. a real database) sit in the middle. End-to-end tests (fewest, slowest, test the full system as a user would) sit at the top. A common mistake is inverting the pyramid - relying mostly on slow E2E tests, which makes the suite slow and flaky. Aim for fast feedback: most bugs should be caught by unit tests."
+  },
+  {
+    "id": "machine-learning-bias-variance",
+    "topic": "Machine Learning",
+    "title": "Bias-variance tradeoff",
+    "content": "High bias (underfitting) means the model is too simple to capture the underlying pattern - both training and validation error are high. High variance (overfitting) means the model fits training data too closely, including its noise - training error is low but validation error is high. Fixes for high bias: a more complex model, more features. Fixes for high variance: more training data, regularization, simpler model, dropout (for neural nets), or early stopping."
+  },
+  {
+    "id": "machine-learning-model-evaluation",
+    "topic": "Model Evaluation",
+    "title": "Choosing the right evaluation metric",
+    "content": "Accuracy is misleading on imbalanced datasets (a model predicting 'no fraud' 100% of the time can be 99% accurate if fraud is rare). Precision answers 'of predicted positives, how many were correct' - matters when false positives are costly. Recall answers 'of actual positives, how many did we catch' - matters when false negatives are costly (e.g. missing a fraud case). F1 balances the two. For ranking/probability outputs, ROC-AUC or PR-AUC are common. Always tie the metric choice to the actual business cost of each error type."
+  },
+  {
+    "id": "machine-learning-feature-engineering",
+    "topic": "Feature Engineering",
+    "title": "Feature engineering fundamentals",
+    "content": "Good features often matter more than model choice. Common techniques: encoding categoricals (one-hot for low cardinality, target/embedding encoding for high cardinality), scaling numeric features for distance-based or gradient-based models, creating interaction features when two variables' combined effect matters, and extracting date/time components (day of week, is-holiday) rather than leaving raw timestamps. Always fit any scaling/encoding on the training set only, then apply it to validation/test - fitting on the full dataset leaks information."
+  },
+  {
+    "id": "deep-learning-basics",
+    "topic": "Deep Learning",
+    "title": "How backpropagation works, at a high level",
+    "content": "A neural network makes a forward pass to produce a prediction, then a loss function measures how wrong it was. Backpropagation computes the gradient of the loss with respect to every weight using the chain rule, working backward from the output layer. An optimizer (e.g. Adam, SGD) then nudges each weight in the direction that reduces loss, scaled by the learning rate. Vanishing/exploding gradients in deep networks are a big part of why architectures like ResNet (skip connections) and normalization layers exist."
+  },
+  {
+    "id": "mlops-model-deployment",
+    "topic": "Model Deployment",
+    "title": "Deploying ML models safely",
+    "content": "Shadow deployment runs the new model alongside the old one on live traffic without serving its predictions, letting you compare before committing. Canary deployment serves the new model to a small percentage of real traffic first, expanding gradually if metrics hold. Always version both the model artifact and the feature pipeline together - a mismatch between training-time and serving-time feature computation ('training-serving skew') is one of the most common causes of a model that worked in testing but fails in production."
+  },
+  {
+    "id": "mlops-monitoring",
+    "topic": "Monitoring",
+    "title": "Monitoring ML models in production",
+    "content": "Beyond standard system metrics (latency, error rate), ML systems need to watch for data drift (the distribution of incoming data shifting from training data) and concept drift (the relationship between features and the target changing over time, e.g. user behavior shifting). Since ground truth labels are often delayed or unavailable in production, proxy metrics (prediction distribution shifts, confidence score trends) are commonly used as an early warning before a real performance drop is measurable."
+  },
+  {
+    "id": "devops-cicd",
+    "topic": "CI/CD",
+    "title": "CI/CD pipeline fundamentals",
+    "content": "Continuous Integration means every code change is automatically built and tested, catching integration issues early instead of at a big merge. Continuous Delivery means the build is always in a deployable state, with an automated (or one-click) release process. Continuous Deployment goes further and deploys every passing change to production automatically. Good pipelines run fast (parallelized tests, caching dependencies) since slow feedback loops discourage frequent commits, and they fail fast and loud rather than silently."
+  },
+  {
+    "id": "devops-containers",
+    "topic": "Containers",
+    "title": "Containers vs virtual machines",
+    "content": "A VM virtualizes hardware and runs a full guest OS, which is heavier but gives strong isolation. A container virtualizes at the OS level, sharing the host kernel, so it starts in seconds and uses far less overhead - but isolation is slightly weaker than a full VM. Docker images are built in layers (each instruction in a Dockerfile adds a layer), and layer caching is why ordering instructions from least-to-most frequently changed (e.g. installing dependencies before copying source code) speeds up rebuilds."
+  },
+  {
+    "id": "devops-kubernetes",
+    "topic": "Kubernetes",
+    "title": "Kubernetes core concepts",
+    "content": "A Pod is the smallest deployable unit (one or more tightly coupled containers). A Deployment manages a desired number of Pod replicas and handles rolling updates. A Service gives Pods a stable network identity even as individual Pods are replaced. Horizontal Pod Autoscaling adjusts replica count based on metrics like CPU. A common interview question is explaining what happens during a rolling deployment - Kubernetes gradually replaces old Pods with new ones while keeping the service available throughout."
+  },
+  {
+    "id": "cloud-aws-basics",
+    "topic": "Cloud",
+    "title": "Common AWS building blocks",
+    "content": "EC2 provides virtual machines; S3 provides object storage (durable, not a filesystem - good for large blobs, backups, static assets); RDS provides managed relational databases; Lambda runs code without managing servers, billed per invocation, good for event-driven or bursty workloads. A common interview probe is cost/tradeoff reasoning: e.g. Lambda is great for infrequent or spiky traffic, but a steadily busy service often costs less on EC2 or containers."
+  },
+  {
+    "id": "networking-basics",
+    "topic": "Networking",
+    "title": "TCP vs UDP, and DNS resolution",
+    "content": "TCP is connection-oriented and guarantees ordered, reliable delivery (with retransmission) at the cost of latency - used for HTTP, most APIs. UDP is connectionless with no delivery guarantee but lower overhead - used where speed matters more than reliability, e.g. video streaming, DNS queries themselves, gaming. DNS resolution walks from root servers to TLD servers to the authoritative nameserver for a domain, though in practice most lookups are served from a resolver's cache, which is why DNS TTLs matter for how quickly changes propagate."
+  },
+  {
+    "id": "frontend-react-state",
+    "topic": "State Management",
+    "title": "Choosing where React state lives",
+    "content": "Keep state as local as possible by default - lifting it up to a shared parent only when multiple components genuinely need it. Context is good for state that's truly global but changes infrequently (theme, auth user) - using it for frequently-changing state causes unnecessary re-renders of every consumer. A dedicated state library (Redux, Zustand, etc.) earns its complexity when state is shared across many distant components with complex update logic - for a small-to-medium app, plain useState/useContext is often enough."
+  },
+  {
+    "id": "frontend-performance",
+    "topic": "Performance",
+    "title": "Common frontend performance wins",
+    "content": "Code-split by route so users only download the JavaScript needed for the page they're on. Memoize expensive computations and avoid unnecessary re-renders (React.memo, useMemo, useCallback) - but only after profiling shows it matters, since premature memoization adds complexity for no benefit. Lazy-load images and below-the-fold content. For perceived performance, optimistic UI updates (reflecting the expected result immediately, before the server confirms) often matter more to users than shaving milliseconds off an API call."
+  },
+  {
+    "id": "embedded-rtos",
+    "topic": "RTOS",
+    "title": "Real-time operating systems and task scheduling",
+    "content": "An RTOS schedules tasks by priority with deterministic timing guarantees, unlike a general-purpose OS optimized for average throughput. Priority inversion (a low-priority task blocking a high-priority one indirectly, via a shared resource) is a classic RTOS bug - priority inheritance protocols are the standard fix. Interrupt service routines (ISRs) should do minimal work and defer heavier processing to a task, since long ISRs block other interrupts and hurt real-time guarantees."
+  },
+  {
+    "id": "embedded-communication-protocols",
+    "topic": "UART",
+    "title": "UART, SPI, and I2C compared",
+    "content": "UART is asynchronous, point-to-point, no shared clock line - simple but requires matching baud rates on both ends. SPI is synchronous with a shared clock, full-duplex, and fast, but needs a separate chip-select line per device, which doesn't scale well to many devices. I2C is synchronous, half-duplex, and uses just two shared lines (clock and data) with device addressing, so it scales to many devices on one bus but is slower than SPI. Choice usually comes down to speed needs vs. pin/wiring constraints."
+  },
+  {
+    "id": "embedded-interrupts",
+    "topic": "Interrupts",
+    "title": "Debugging interrupt-related bugs",
+    "content": "Shared variables between an ISR and main code must be declared volatile so the compiler doesn't cache a stale value in a register, and access to multi-byte shared variables often needs to be protected (disabling interrupts briefly, or using atomic operations) to avoid a torn read/write if an interrupt fires mid-access. A common embedded interview question is explaining exactly this class of bug, since it's subtle, hardware-dependent, and doesn't show up in every test run."
+  },
+  {
+    "id": "behavioral-star-method",
+    "topic": "Behavioral",
+    "title": "Structuring behavioral answers (STAR)",
+    "content": "Situation: brief context - what was the setting. Task: what were you specifically responsible for. Action: what you actually did, in detail - this is the part interviewers care about most, so don't rush it. Result: the outcome, ideally with a concrete number or measurable impact, plus what you learned. A common mistake is spending most of the answer on Situation/Task and rushing Action/Result - flip that ratio."
+  },
+  {
+    "id": "behavioral-conflict",
+    "topic": "Behavioral",
+    "title": "Answering 'tell me about a conflict' well",
+    "content": "Pick a real disagreement with a peer (not a subordinate you simply overruled, and not something so severe it raises red flags). Focus on how you understood the other person's perspective and worked toward a resolution, not on proving you were right. Interviewers are listening for self-awareness and collaboration skills, not for who 'won' the disagreement - a good answer often includes something you'd do differently in hindsight."
+  },
+  {
+    "id": "product-prioritization",
+    "topic": "Prioritization",
+    "title": "Prioritization frameworks",
+    "content": "RICE scores initiatives by Reach x Impact x Confidence / Effort, giving a comparable number across very different ideas. MoSCoW sorts requirements into Must-have, Should-have, Could-have, Won't-have for a given release. Whatever framework you name, be ready to explain the reasoning behind an actual prioritization decision you made, including what you deliberately chose not to do and why - that's usually the more revealing part of the answer."
+  },
+  {
+    "id": "product-metrics",
+    "topic": "Metrics",
+    "title": "Picking the right product metric",
+    "content": "A good metric is a leading indicator (predicts future outcomes, like activation rate predicting retention) rather than only a lagging one (revenue, which tells you what already happened). Beware vanity metrics (total signups) that look good but don't reflect real engagement or value delivered. When asked to define success for a feature, name both a primary metric and a guardrail metric (something that should not get worse, e.g. latency or churn) - it shows you're thinking about tradeoffs, not just growth."
+  }
+]

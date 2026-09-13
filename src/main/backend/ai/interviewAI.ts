@@ -6,11 +6,14 @@ import type {
   JobMatch,
   ResumeInformation
 } from '@shared/types'
+import type { KnowledgeBaseDocument } from '../rag/retriever'
 
 export interface InterviewContext {
   state: InterviewState
   resumeInformation: ResumeInformation | null
   jobMatch: JobMatch | null
+  /** Retrieved (RAG) study notes for the candidate's weaker topics - only populated for createFinalReport. */
+  relevantStudyNotes?: KnowledgeBaseDocument[]
 }
 
 export interface AnswerContext extends InterviewContext {
